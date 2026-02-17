@@ -18,63 +18,6 @@ modalBackdrop.addEventListener("click", closeModal);
 
 const statusBoost = { stable_threat: 0.05, frozen: 0.15, elevated: 0.25, active: 0.4 };
 
-const HOTSPOT_SOURCE_ID = "hotspots";
-const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
-const HOTSPOT_LAYER_ID = "hotspots-layer";
-
-const basemapStyles = {
-  arcgis: {
-    version: 8,
-    name: "ArcGIS World Street Map",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      "esri-street": {
-        type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri"
-      }
-    },
-    layers: [{ id: "esri-street-layer", type: "raster", source: "esri-street" }]
-  },
-  osm: {
-    version: 8,
-    name: "OpenStreetMap Standard",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors"
-      }
-    },
-    layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
-  },
-  cartoDark: {
-    version: 8,
-    name: "Carto Dark Matter",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      carto: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
-  }
-};
-
 const hotspotEnrichment = {
   ukraine_russia: {
     flag: "🇺🇦 🇷🇺",
@@ -105,10 +48,6 @@ const hotspotEnrichment = {
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sana%27a_City%2C_Yemen.jpg/1280px-Sana%27a_City%2C_Yemen.jpg"
   }
 };
-
-let fullFeatureCollection = null;
-let filteredFeatures = [];
-let mapDataReady = false;
 
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
@@ -257,7 +196,18 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
-function renderHotspotList(features, map) {
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://tiles.openfreemap.org/styles/liberty",
+  center: [5, 24],
+  zoom: 1.45,
+  projection: "globe"
+});
+
+let fullFeatureCollection = null;
+let filteredFeatures = [];
+
+function renderHotspotList(features) {
   hotspotListEl.innerHTML = "";
 
   for (const feature of [...features].sort((a, b) => b.properties.severity - a.properties.severity)) {
@@ -362,15 +312,9 @@ function wireFilterHandlers(map) {
   searchInputEl.addEventListener("input", () => applyFilters(map));
 }
 
-function setProjection(map) {
-  const projectionName = projectionEl.checked ? "globe" : "mercator";
-  map.setProjection({ type: projectionName });
-  if (projectionName === "globe") {
-    map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
-  } else {
-    map.setFog(null);
-  }
-}
+map.on("load", async () => {
+  map.addControl(new maplibregl.NavigationControl(), "top-right");
+  map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
 
 async function loadHotspotsFromJson() {
   const response = await fetch("./data/hotspots.json", { cache: "no-store" });
@@ -402,7 +346,7 @@ async function loadHotspotsFromJson() {
   setRegionOptions(features);
 
   const regionsCount = new Set(hotspots.map((h) => h.region)).size;
-  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded directly from JSON.`;
+  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded with geospatial risk metadata.`;
 
   const lastUpdated = hotspots
     .map((h) => h.last_update)
@@ -421,21 +365,38 @@ async function init() {
     projection: "mercator"
   });
 
-  map.addControl(new maplibregl.NavigationControl(), "top-right");
-  wireFilterHandlers(map);
+  map.addSource("hotspots", { type: "geojson", data: fullFeatureCollection });
 
-  projectionEl.addEventListener("change", () => setProjection(map));
-
-  basemapEl.addEventListener("change", () => {
-    const style = basemapStyles[basemapEl.value] ?? basemapStyles.arcgis;
-    map.setStyle(style);
+  map.addLayer({
+    id: "hotspots-glow",
+    type: "circle",
+    source: "hotspots",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 4, 14, 6, 20],
+      "circle-color": ["get", "color"],
+      "circle-opacity": 0.24,
+      "circle-blur": 0.7
+    }
   });
 
-  map.on("style.load", () => {
-    ensureHotspotLayers(map);
-    setProjection(map);
-    if (mapDataReady) {
-      applyFilters(map);
+  map.addLayer({
+    id: "hotspots-layer",
+    type: "circle",
+    source: "hotspots",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 7, 6, 11],
+      "circle-color": ["get", "color"],
+      "circle-stroke-width": 1.2,
+      "circle-stroke-color": "#ffffff",
+      "circle-opacity": 0.96
+    }
+  });
+
+  map.on("click", "hotspots-layer", (event) => {
+    const feature = event.features?.[0];
+    if (feature) {
+      map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
+      openIntelCard(feature.properties);
     }
   });
 

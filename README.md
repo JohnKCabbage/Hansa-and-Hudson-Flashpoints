@@ -1,6 +1,6 @@
 # Hansa-and-Hudson-Flashpoints
 
-Global Flashpoints Globe is a no-backend, GitHub Pages-ready intelligence-style common operating picture built with MapLibre GL JS (globe projection) and a local dataset.
+An interactive tool for strategic awareness regarding potential and ongoing global conflicts. 
 
 ## Live site
 
