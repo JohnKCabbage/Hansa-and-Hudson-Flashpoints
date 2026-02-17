@@ -21,6 +21,7 @@ const statusBoost = { stable_threat: 0.05, frozen: 0.15, elevated: 0.25, active:
 const HOTSPOT_SOURCE_ID = "hotspots";
 const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
+const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
 const DEFAULT_BASEMAP = "arcgis";
 const FALLBACK_BASEMAP = "osm";
 const HOTSPOT_DATA_CANDIDATES = [
@@ -62,6 +63,24 @@ const basemapStyles = {
     },
     layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
   },
+  cartoVoyager: {
+    version: 8,
+    name: "Carto Voyager",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      cartoVoyager: {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      }
+    },
+    layers: [{ id: "carto-voyager-layer", type: "raster", source: "cartoVoyager" }]
+  },
   cartoDark: {
     version: 8,
     name: "Carto Dark Matter",
@@ -79,7 +98,24 @@ const basemapStyles = {
       }
     },
     layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
-  }
+  },
+  stamenTonerLite: {
+    version: 8,
+    name: "Stamen Toner Lite",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      stamen: {
+        type: "raster",
+        tiles: [
+          "https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
+      }
+    },
+    layers: [{ id: "stamen-toner-lite-layer", type: "raster", source: "stamen" }]
+  },
+  libreDemo: "https://demotiles.maplibre.org/style.json"
 };
 
 const hotspotEnrichment = {
@@ -110,6 +146,66 @@ const hotspotEnrichment = {
   yemen_red_sea: {
     flag: "🇾🇪",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sana%27a_City%2C_Yemen.jpg/1280px-Sana%27a_City%2C_Yemen.jpg"
+  },
+  sudan: {
+    flag: "🇸🇩",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Khartoum-skyline.jpg/1280px-Khartoum-skyline.jpg"
+  },
+  myanmar: {
+    flag: "🇲🇲",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Yangon_downtown.jpg/1280px-Yangon_downtown.jpg"
+  },
+  drc_east: {
+    flag: "🇨🇩",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Goma_cityscape.jpg/1280px-Goma_cityscape.jpg"
+  },
+  haiti: {
+    flag: "🇭🇹",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Port-au-Prince.jpg/1280px-Port-au-Prince.jpg"
+  },
+  ethiopia_tigray_aftershock: {
+    flag: "🇪🇹",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Addis_Ababa_montage.png/1280px-Addis_Ababa_montage.png"
+  },
+  sahel_central: {
+    flag: "🇲🇱 🇳🇪 🇧🇫",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Niamey%2C_Niger.jpg/1280px-Niamey%2C_Niger.jpg"
+  },
+  somalia: {
+    flag: "🇸🇴",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Mogadishu_Skyline.jpg/1280px-Mogadishu_Skyline.jpg"
+  },
+  lebanon_border: {
+    flag: "🇱🇧 🇮🇱",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Blue_Line_Lebanon.jpg/1280px-Blue_Line_Lebanon.jpg"
+  },
+  libya: {
+    flag: "🇱🇾",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Tripoli_skyline_2016.jpg/1280px-Tripoli_skyline_2016.jpg"
+  },
+  western_sahara: {
+    flag: "🇪🇭 🇲🇦",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Laayoune_city.jpg/1280px-Laayoune_city.jpg"
+  },
+  cyprus: {
+    flag: "🇨🇾",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Nicosia_old_city.jpg/1280px-Nicosia_old_city.jpg"
+  },
+  kosovo_serbia: {
+    flag: "🇽🇰 🇷🇸",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Mitrovica_bridge.jpg/1280px-Mitrovica_bridge.jpg"
+  },
+  armenia_azerbaijan: {
+    flag: "🇦🇲 🇦🇿",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/South_Caucasus_mountains.jpg/1280px-South_Caucasus_mountains.jpg"
+  },
+  georgia_abkhazia_ossetia: {
+    flag: "🇬🇪",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Tbilisi_montage.png/1280px-Tbilisi_montage.png"
+  },
+  transnistria: {
+    flag: "🇲🇩",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Tiraspol_montage.jpg/1280px-Tiraspol_montage.jpg"
   }
 };
 
@@ -118,6 +214,8 @@ let filteredFeatures = [];
 let mapDataReady = false;
 let activeBasemapKey = DEFAULT_BASEMAP;
 let arcgisFallbackTriggered = false;
+let hoverPopup = null;
+let hotspotInteractionBound = false;
 
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
@@ -167,16 +265,63 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizeSources(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    if (!value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return value.split(/\s*[•,;]\s*/).filter(Boolean);
+  }
+  return [];
+}
+
+function inferFlagFromName(name) {
+  const n = String(name).toLowerCase();
+  if (n.includes("ukraine") || n.includes("russia")) return "🇺🇦 🇷🇺";
+  if (n.includes("israel") || n.includes("gaza") || n.includes("palestin")) return "🇮🇱 🇵🇸";
+  if (n.includes("taiwan") || n.includes("china")) return "🇹🇼 🇨🇳";
+  if (n.includes("kashmir") || n.includes("india") || n.includes("pakistan")) return "🇮🇳 🇵🇰";
+  if (n.includes("korea")) return "🇰🇷 🇰🇵";
+  if (n.includes("yemen")) return "🇾🇪";
+  if (n.includes("sudan")) return "🇸🇩";
+  if (n.includes("myanmar")) return "🇲🇲";
+  if (n.includes("congo")) return "🇨🇩";
+  if (n.includes("sahel") || n.includes("mali") || n.includes("niger")) return "🇲🇱 🇳🇪";
+  if (n.includes("haiti")) return "🇭🇹";
+  if (n.includes("ethiopia")) return "🇪🇹";
+  if (n.includes("somalia")) return "🇸🇴";
+  if (n.includes("libya")) return "🇱🇾";
+  if (n.includes("western sahara")) return "🇪🇭";
+  if (n.includes("cyprus")) return "🇨🇾";
+  if (n.includes("kosovo") || n.includes("serbia")) return "🇽🇰 🇷🇸";
+  if (n.includes("armenia") || n.includes("azerbaijan")) return "🇦🇲 🇦🇿";
+  if (n.includes("georgia")) return "🇬🇪";
+  if (n.includes("moldova") || n.includes("transnistria")) return "🇲🇩";
+  if (n.includes("peru")) return "🇵🇪";
+  return "🌐";
+}
+
 function buildAnalysis(properties) {
   const statusText = badgeLabel(properties.status).toLowerCase();
   const severity = Number(properties.severity);
   const severityBand = severity > 0.8
-    ? "This flashpoint is in the highest risk band and could cascade quickly if deterrence weakens."
+    ? "The flashpoint is in the highest risk band, where localized shocks can cascade into cross-border escalation within short timelines."
     : severity > 0.6
-      ? "This flashpoint sits in a high-risk band where tactical incidents could outpace diplomatic response."
-      : "This flashpoint remains comparatively contained but still needs active risk management to avoid drift.";
+      ? "The flashpoint is in a high-risk band where tactical events can outpace formal diplomacy and crisis-management channels."
+      : "The flashpoint remains relatively contained, but unresolved structural drivers still require active monitoring and preventive diplomacy.";
 
-  return `${properties.summary} Current indicators classify the situation as ${statusText}, with likelihood at ${Number(properties.likelihood).toFixed(2)} and potential impact at ${Number(properties.impact).toFixed(2)}. ${severityBand}`;
+  const regionalContext = {
+    Europe: "Regional security architecture and alliance signaling materially shape escalation pathways.",
+    "Middle East": "Proxy networks and deterrence signaling create rapid second-order escalation risks.",
+    Africa: "Governance fragmentation, displacement patterns, and cross-border armed mobility remain key multipliers.",
+    "Asia-Pacific": "Maritime/airspace encounters and force-posture signaling are central to near-term risk swings.",
+    Americas: "State-capacity stress and armed-group adaptation influence durability and spillover risk."
+  }[properties.region] ?? "Geopolitical competition, governance conditions, and coercive signaling remain core risk drivers.";
+
+  return `${properties.summary} Current indicators classify this as ${statusText} with likelihood ${Number(properties.likelihood).toFixed(2)} and impact ${Number(properties.impact).toFixed(2)}. ${severityBand} ${regionalContext}`;
 }
 
 function renderSummary(features, filtered) {
@@ -250,8 +395,8 @@ function openIntelCard(properties) {
     ${dates ? `<div class="box"><div class="eyebrow">Key dates</div><ul>${dates}</ul></div>` : ""}
     ${events ? `<div class="box" style="margin-top:10px"><div class="eyebrow">Significant events</div><ul>${events}</ul></div>` : ""}
 
-    ${properties.sources?.length
-      ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(properties.sources.join(" • "))}</div>`
+    ${normalizeSources(properties.sources).length
+      ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(normalizeSources(properties.sources).join(" • "))}</div>`
       : ""}
   `;
 
@@ -268,7 +413,7 @@ function closeModal() {
 
 function getBasemapStyle(styleKey) {
   const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
-  return JSON.parse(JSON.stringify(style));
+  return typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
 }
 
 function setBasemap(map, styleKey) {
@@ -314,10 +459,10 @@ function ensureHotspotLayers(map) {
       type: "circle",
       source: HOTSPOT_SOURCE_ID,
       paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 4, 14, 6, 20],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 10, 4, 18, 6, 26],
         "circle-color": ["get", "color"],
-        "circle-opacity": 0.24,
-        "circle-blur": 0.7
+        "circle-opacity": 0.26,
+        "circle-blur": 0.75
       }
     });
   }
@@ -328,24 +473,60 @@ function ensureHotspotLayers(map) {
       type: "circle",
       source: HOTSPOT_SOURCE_ID,
       paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 7, 6, 11],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 3, 8, 6, 12],
         "circle-color": ["get", "color"],
-        "circle-stroke-width": 1.2,
+        "circle-stroke-width": 1.3,
         "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.96
+        "circle-opacity": 0.97
       }
     });
+  }
 
-    map.on("click", HOTSPOT_LAYER_ID, (event) => {
-      const feature = event.features?.[0];
+  if (!map.getLayer(HOTSPOT_HIT_LAYER_ID)) {
+    map.addLayer({
+      id: HOTSPOT_HIT_LAYER_ID,
+      type: "circle",
+      source: HOTSPOT_SOURCE_ID,
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 14, 3, 18, 6, 22],
+        "circle-color": "#000000",
+        "circle-opacity": 0
+      }
+    });
+  }
+
+  if (!hotspotInteractionBound) {
+    hotspotInteractionBound = true;
+
+    map.on("click", (event) => {
+      const feature = map.queryRenderedFeatures(event.point, { layers: [HOTSPOT_HIT_LAYER_ID, HOTSPOT_LAYER_ID] })?.[0];
       if (feature) {
         map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
         openIntelCard(feature.properties);
       }
     });
 
-    map.on("mouseenter", HOTSPOT_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
-    map.on("mouseleave", HOTSPOT_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+    map.on("mousemove", (event) => {
+      const feature = map.queryRenderedFeatures(event.point, { layers: [HOTSPOT_HIT_LAYER_ID, HOTSPOT_LAYER_ID] })?.[0];
+      if (!feature) {
+        map.getCanvas().style.cursor = "";
+        if (hoverPopup) hoverPopup.remove();
+        return;
+      }
+
+      map.getCanvas().style.cursor = "pointer";
+      const p = feature.properties;
+      const html = `<div class="mapTooltip"><strong>${escapeHtml(p.name)}</strong><br><span>${badgeLabel(p.status)} · severity ${Number(p.severity).toFixed(2)}</span></div>`;
+      if (!hoverPopup) {
+        hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: "hotspotTooltip" });
+      }
+      hoverPopup.setLngLat(feature.geometry.coordinates).setHTML(html).addTo(map);
+    });
+
+    map.on("mouseout", () => {
+      map.getCanvas().style.cursor = "";
+      if (hoverPopup) hoverPopup.remove();
+    });
   }
 }
 
@@ -418,8 +599,15 @@ async function loadHotspotsFromJson() {
   const features = hotspots.map((h) => {
     const severity = computeSeverity(h);
     const enrichment = hotspotEnrichment[h.id] ?? {};
-    const image = enrichment.image ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
-    const flag = enrichment.flag ?? "🌐";
+    const regionFallbackImage = {
+      Europe: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Europe_satellite_globe.jpg/1280px-Europe_satellite_globe.jpg",
+      "Middle East": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Jerusalem_BW_14.JPG/1280px-Jerusalem_BW_14.JPG",
+      Africa: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/African_Union_headquarters.jpg/1280px-African_Union_headquarters.jpg",
+      "Asia-Pacific": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Singapore_skyline_2019.jpg/1280px-Singapore_skyline_2019.jpg",
+      Americas: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Bogota_CBD.jpg/1280px-Bogota_CBD.jpg"
+    }[h.region];
+    const image = enrichment.image ?? regionFallbackImage ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
+    const flag = enrichment.flag ?? inferFlagFromName(h.name);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [h.lon, h.lat] },
@@ -474,7 +662,7 @@ async function init() {
     const arcgisRequestFailure = /arcgis|esri|world_street_map|rest\/services\/world_street_map/i.test(message + sourceId)
       && /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === "arcgis" && !arcgisFallbackTriggered && arcgisRequestFailure;
+    const shouldFallback = activeBasemapKey === "arcgis" && !arcgisFallbackTriggered && !mapDataReady && arcgisRequestFailure;
     if (shouldFallback) {
       arcgisFallbackTriggered = true;
       console.warn("ArcGIS basemap request failed in this environment; falling back to OSM.", event.error);
