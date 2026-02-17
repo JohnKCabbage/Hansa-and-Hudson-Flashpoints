@@ -4,7 +4,8 @@ Global Flashpoints Globe is a no-backend, GitHub Pages-ready intelligence-style 
 
 ## Live site
 
-https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
+[https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
+](https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/)
 
 ## What this build includes
 
