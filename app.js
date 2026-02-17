@@ -16,6 +16,37 @@ modalBackdrop.addEventListener("click", closeModal);
 
 const statusBoost = { stable_threat: 0.05, frozen: 0.15, elevated: 0.25, active: 0.4 };
 
+const hotspotEnrichment = {
+  ukraine_russia: {
+    flag: "🇺🇦 🇷🇺",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bakhmut_shelling_2022.jpg/1280px-Bakhmut_shelling_2022.jpg"
+  },
+  gaza_israel: {
+    flag: "🇵🇸 🇮🇱",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Gaza_City_skyline.jpg/1280px-Gaza_City_skyline.jpg"
+  },
+  taiwan_strait: {
+    flag: "🇹🇼 🇨🇳",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Taipei_101_from_Xiangshan_2013.jpg/1280px-Taipei_101_from_Xiangshan_2013.jpg"
+  },
+  kashmir_india_pakistan: {
+    flag: "🇮🇳 🇵🇰",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Srinagar_Leh_highway.jpg/1280px-Srinagar_Leh_highway.jpg"
+  },
+  south_china_sea: {
+    flag: "🇨🇳 🇵🇭 🇻🇳 🇲🇾",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/South_China_Sea_map.png/1280px-South_China_Sea_map.png"
+  },
+  korean_peninsula: {
+    flag: "🇰🇷 🇰🇵",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Panmunjeom_DMZ.jpg/1280px-Panmunjeom_DMZ.jpg"
+  },
+  yemen_red_sea: {
+    flag: "🇾🇪",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sana%27a_City%2C_Yemen.jpg/1280px-Sana%27a_City%2C_Yemen.jpg"
+  }
+};
+
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
 function computeSeverity(h) {
@@ -34,14 +65,14 @@ function severityToColor(score) {
   let b;
   if (s <= 0.5) {
     const t = s / 0.5;
-    r = Math.round(lerp(30, 255, t));
-    g = Math.round(lerp(215, 212, t));
-    b = Math.round(lerp(96, 59, t));
+    r = Math.round(lerp(58, 236, t));
+    g = Math.round(lerp(126, 207, t));
+    b = Math.round(lerp(98, 87, t));
   } else {
     const t = (s - 0.5) / 0.5;
-    r = 255;
-    g = Math.round(lerp(212, 59, t));
-    b = Math.round(lerp(59, 48, t));
+    r = Math.round(lerp(236, 250, t));
+    g = Math.round(lerp(207, 109, t));
+    b = Math.round(lerp(87, 78, t));
   }
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
@@ -62,6 +93,18 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function buildAnalysis(properties) {
+  const statusText = badgeLabel(properties.status).toLowerCase();
+  const severity = Number(properties.severity);
+  const severityBand = severity > 0.8
+    ? "This flashpoint is in the highest risk band and could cascade quickly if deterrence weakens."
+    : severity > 0.6
+      ? "This flashpoint sits in a high-risk band where tactical incidents could outpace diplomatic response."
+      : "This flashpoint remains comparatively contained but still needs active risk management to avoid drift.";
+
+  return `${properties.summary} Current indicators classify the situation as ${statusText}, with likelihood at ${Number(properties.likelihood).toFixed(2)} and potential impact at ${Number(properties.impact).toFixed(2)}. ${severityBand}`;
 }
 
 function renderSummary(features, filtered) {
@@ -103,33 +146,36 @@ function openIntelCard(properties) {
   const events = (properties.events ?? []).map((e) => `<li>${escapeHtml(e)}</li>`).join("");
 
   modalContent.innerHTML = `
+    <div class="cardHero">
+      <img src="${escapeHtml(properties.image)}" alt="${escapeHtml(properties.name)} context image" referrerpolicy="no-referrer" />
+    </div>
     <div class="cardTitle">
-      <h2 style="margin:0">${escapeHtml(properties.name)}</h2>
+      <h2 style="margin:0">${escapeHtml(properties.flag)} ${escapeHtml(properties.name)}</h2>
       <span class="badge">${escapeHtml(properties.region ?? "Global")}</span>
       <span class="badge" style="border-color:${properties.color};">${badgeLabel(properties.status)}</span>
-      <span class="badge" style="background:${properties.color}; color:#111; border:none;">severity ${sev}</span>
+      <span class="badge severityPill" style="background:${properties.color};">severity ${sev}</span>
     </div>
 
     <div class="kv">
       <div class="box">
-        <div style="opacity:.8;font-size:12px">Threat matrix</div>
+        <div class="eyebrow">Threat matrix</div>
         <div><b>Likelihood:</b> ${Number(properties.likelihood).toFixed(2)} · <b>Impact:</b> ${Number(properties.impact).toFixed(2)}</div>
         <div style="margin-top:6px;"><b>Category:</b> ${escapeHtml(properties.category ?? "flashpoint")}</div>
       </div>
       <div class="box">
-        <div style="opacity:.8;font-size:12px">Core dates</div>
+        <div class="eyebrow">Core dates</div>
         <div><b>Start:</b> ${escapeHtml(properties.start_date ?? "—")}</div>
         <div><b>Last update:</b> ${escapeHtml(properties.last_update ?? "—")}</div>
       </div>
     </div>
 
     <div class="box" style="margin-bottom:10px">
-      <div style="opacity:.8;font-size:12px">Summary</div>
-      <div style="margin-top:6px; line-height:1.45">${escapeHtml(properties.summary ?? "")}</div>
+      <div class="eyebrow">Analysis</div>
+      <div style="margin-top:6px; line-height:1.55">${escapeHtml(properties.analysis)}</div>
     </div>
 
-    ${dates ? `<div class="box"><div style="opacity:.8;font-size:12px">Key dates</div><ul>${dates}</ul></div>` : ""}
-    ${events ? `<div class="box" style="margin-top:10px"><div style="opacity:.8;font-size:12px">Significant events</div><ul>${events}</ul></div>` : ""}
+    ${dates ? `<div class="box"><div class="eyebrow">Key dates</div><ul>${dates}</ul></div>` : ""}
+    ${events ? `<div class="box" style="margin-top:10px"><div class="eyebrow">Significant events</div><ul>${events}</ul></div>` : ""}
 
     ${properties.sources?.length
       ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(properties.sources.join(" • "))}</div>`
@@ -149,9 +195,10 @@ function closeModal() {
 
 const map = new maplibregl.Map({
   container: "map",
-  style: "https://demotiles.maplibre.org/style.json",
-  center: [0, 20],
-  zoom: 1.2
+  style: "https://tiles.openfreemap.org/styles/liberty",
+  center: [5, 24],
+  zoom: 1.45,
+  projection: "globe"
 });
 
 let fullFeatureCollection = null;
@@ -166,11 +213,11 @@ function renderHotspotList(features) {
     button.className = "hotspotBtn";
     button.type = "button";
     button.innerHTML = `
-      <strong>${escapeHtml(feature.properties.name)}</strong>
+      <strong>${escapeHtml(feature.properties.flag)} ${escapeHtml(feature.properties.name)}</strong>
       <span class="hotspotMeta">${escapeHtml(feature.properties.region)} · ${badgeLabel(feature.properties.status)} · sev ${Number(feature.properties.severity).toFixed(2)}</span>
     `;
     button.addEventListener("click", () => {
-      map.flyTo({ center: feature.geometry.coordinates, zoom: 3.2, essential: true });
+      map.flyTo({ center: feature.geometry.coordinates, zoom: 3.3, essential: true });
       openIntelCard(feature.properties);
     });
     li.appendChild(button);
@@ -216,22 +263,33 @@ searchInputEl.addEventListener("input", applyFilters);
 
 map.on("load", async () => {
   map.addControl(new maplibregl.NavigationControl(), "top-right");
+  map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
 
   const response = await fetch("./data/hotspots.json");
   const hotspots = await response.json();
 
   const features = hotspots.map((h) => {
     const severity = computeSeverity(h);
+    const enrichment = hotspotEnrichment[h.id] ?? {};
+    const image = enrichment.image ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
+    const flag = enrichment.flag ?? "🌐";
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [h.lon, h.lat] },
-      properties: { ...h, severity, color: severityToColor(severity) }
+      properties: {
+        ...h,
+        severity,
+        color: severityToColor(severity),
+        flag,
+        image,
+        analysis: h.analysis ?? buildAnalysis({ ...h, severity })
+      }
     };
   });
 
   fullFeatureCollection = { type: "FeatureCollection", features };
   const regionsCount = new Set(hotspots.map((h) => h.region)).size;
-  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, fully loaded from JSON.`;
+  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded with geospatial risk metadata.`;
 
   const lastUpdated = hotspots
     .map((h) => h.last_update)
@@ -245,21 +303,36 @@ map.on("load", async () => {
   map.addSource("hotspots", { type: "geojson", data: fullFeatureCollection });
 
   map.addLayer({
+    id: "hotspots-glow",
+    type: "circle",
+    source: "hotspots",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 4, 14, 6, 20],
+      "circle-color": ["get", "color"],
+      "circle-opacity": 0.24,
+      "circle-blur": 0.7
+    }
+  });
+
+  map.addLayer({
     id: "hotspots-layer",
     type: "circle",
     source: "hotspots",
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 6, 6, 9],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 7, 6, 11],
       "circle-color": ["get", "color"],
-      "circle-stroke-width": 1,
+      "circle-stroke-width": 1.2,
       "circle-stroke-color": "#ffffff",
-      "circle-opacity": 0.92
+      "circle-opacity": 0.96
     }
   });
 
   map.on("click", "hotspots-layer", (event) => {
     const feature = event.features?.[0];
-    if (feature) openIntelCard(feature.properties);
+    if (feature) {
+      map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
+      openIntelCard(feature.properties);
+    }
   });
   map.on("mouseenter", "hotspots-layer", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "hotspots-layer", () => { map.getCanvas().style.cursor = ""; });
