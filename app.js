@@ -269,6 +269,13 @@ function getBasemapStyle(styleKey) {
   const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
   return JSON.parse(JSON.stringify(style));
 }
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://tiles.openfreemap.org/styles/liberty",
+  center: [5, 24],
+  zoom: 1.45,
+  projection: "globe"
+});
 
 function setBasemap(map, styleKey) {
   activeBasemapKey = basemapStyles[styleKey] ? styleKey : DEFAULT_BASEMAP;
@@ -413,6 +420,17 @@ async function loadHotspotsFromJson() {
   if (!hotspots) {
     throw lastError ?? new Error("Unable to load hotspot dataset from known paths.");
   }
+map.on("load", async () => {
+  map.addControl(new maplibregl.NavigationControl(), "top-right");
+  map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
+
+async function loadHotspotsFromJson() {
+  const response = await fetch("./data/hotspots.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load hotspots.json (${response.status})`);
+  }
+
+  const hotspots = await response.json();
   const features = hotspots.map((h) => {
     const severity = computeSeverity(h);
     const enrichment = hotspotEnrichment[h.id] ?? {};
@@ -437,6 +455,7 @@ async function loadHotspotsFromJson() {
 
   const regionsCount = new Set(hotspots.map((h) => h.region)).size;
   appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded directly from JSON.`;
+  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded with geospatial risk metadata.`;
 
   const lastUpdated = hotspots
     .map((h) => h.last_update)
@@ -450,6 +469,7 @@ async function init() {
   const map = new maplibregl.Map({
     container: "map",
     style: getBasemapStyle(DEFAULT_BASEMAP),
+    style: basemapStyles.arcgis,
     center: [5, 24],
     zoom: 1.45,
     projection: "mercator"
@@ -479,6 +499,38 @@ async function init() {
     setProjection(map);
     if (mapDataReady) {
       applyFilters(map);
+  map.addSource("hotspots", { type: "geojson", data: fullFeatureCollection });
+
+  map.addLayer({
+    id: "hotspots-glow",
+    type: "circle",
+    source: "hotspots",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 4, 14, 6, 20],
+      "circle-color": ["get", "color"],
+      "circle-opacity": 0.24,
+      "circle-blur": 0.7
+    }
+  });
+
+  map.addLayer({
+    id: "hotspots-layer",
+    type: "circle",
+    source: "hotspots",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 7, 6, 11],
+      "circle-color": ["get", "color"],
+      "circle-stroke-width": 1.2,
+      "circle-stroke-color": "#ffffff",
+      "circle-opacity": 0.96
+    }
+  });
+
+  map.on("click", "hotspots-layer", (event) => {
+    const feature = event.features?.[0];
+    if (feature) {
+      map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
+      openIntelCard(feature.properties);
     }
   });
 
@@ -495,4 +547,5 @@ init().catch((error) => {
   appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
   updatedAtEl.textContent = "Dataset updated: unavailable";
   hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
+  appSubtitleEl.textContent = "Failed to load hotspot data. Check console for details.";
 });
