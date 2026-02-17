@@ -204,10 +204,13 @@ const map = new maplibregl.Map({
   projection: "globe"
 });
 
-let fullFeatureCollection = null;
-let filteredFeatures = [];
+function setBasemap(map, styleKey) {
+  activeBasemapKey = basemapStyles[styleKey] ? styleKey : DEFAULT_BASEMAP;
+  basemapEl.value = activeBasemapKey;
+  map.setStyle(getBasemapStyle(activeBasemapKey));
+}
 
-function renderHotspotList(features) {
+function renderHotspotList(features, map) {
   hotspotListEl.innerHTML = "";
 
   for (const feature of [...features].sort((a, b) => b.properties.severity - a.properties.severity)) {
