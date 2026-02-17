@@ -1,6 +1,8 @@
 # Hansa-and-Hudson-Flashpoints
 
-An interactive tool for strategic awareness regarding potential and ongoing global conflicts. 
+An interactive tool for strategic awareness regarding potential and ongoing global conflicts.
+
+Work In Progress
 
 ## Live site
 
