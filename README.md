@@ -4,10 +4,7 @@ Global Flashpoints Globe is a no-backend, GitHub Pages-ready intelligence-style 
 
 ## Live site
 
-- **GitHub Pages URL pattern:** `https://<your-github-username>.github.io/Hansa-and-Hudson-Flashpoints/`
-- **Set your actual live link here after first deploy:** `https://<your-github-username>.github.io/Hansa-and-Hudson-Flashpoints/`
-
-> This project is an educational / portfolio prototype. Severity scores are **notional analyst assessments**, not an official forecast.
+https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
 
 ## What this build includes
 
