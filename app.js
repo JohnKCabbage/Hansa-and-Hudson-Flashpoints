@@ -112,18 +112,6 @@ function openIntelCard(properties) {
       </figure>`
     )
     .join("");
-  const actors = (properties.actors ?? []).map((actor) => `<li>${escapeHtml(actor)}</li>`).join("");
-  const sourceItems = (properties.sources ?? [])
-    .map((source) => {
-      if (typeof source === "string") {
-        return `<li>${escapeHtml(source)}</li>`;
-      }
-      if (source && source.name && source.url) {
-        return `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.name)}</a></li>`;
-      }
-      return "";
-    })
-    .join("");
 
   modalContent.innerHTML = `
     <div class="cardTitle">
@@ -138,7 +126,6 @@ function openIntelCard(properties) {
         <div style="opacity:.8;font-size:12px">Threat matrix</div>
         <div><b>Likelihood:</b> ${Number(properties.likelihood).toFixed(2)} · <b>Impact:</b> ${Number(properties.impact).toFixed(2)}</div>
         <div style="margin-top:6px; opacity:.85"><b>Category:</b> ${escapeHtml(properties.category ?? "flashpoint")}</div>
-        ${properties.trend ? `<div style="margin-top:6px; opacity:.85"><b>Trend:</b> ${escapeHtml(properties.trend)}</div>` : ""}
       </div>
       <div class="box">
         <div style="opacity:.8;font-size:12px">Core dates</div>
@@ -154,11 +141,10 @@ function openIntelCard(properties) {
 
     ${dates ? `<div class="box"><div style="opacity:.8;font-size:12px">Key dates</div><ul>${dates}</ul></div>` : ""}
     ${events ? `<div class="box" style="margin-top:10px"><div style="opacity:.8;font-size:12px">Significant events</div><ul>${events}</ul></div>` : ""}
-    ${actors ? `<div class="box" style="margin-top:10px"><div style="opacity:.8;font-size:12px">Principal actors</div><ul>${actors}</ul></div>` : ""}
     ${imgs ? `<div class="images">${imgs}</div>` : ""}
 
-    ${sourceItems
-      ? `<div class="box" style="margin-top:10px"><div style="opacity:.8;font-size:12px">Sources</div><ul>${sourceItems}</ul></div>`
+    ${properties.sources?.length
+      ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(properties.sources.join(" • "))}</div>`
       : ""}
   `;
 

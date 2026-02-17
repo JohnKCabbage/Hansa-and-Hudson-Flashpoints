@@ -4,20 +4,17 @@ Global Flashpoints Globe is a no-backend, GitHub Pages-ready intelligence-style 
 
 ## Live site
 
-- **GitHub Pages URL pattern:** `https://<your-github-username>.github.io/Hansa-and-Hudson-Flashpoints/`
-- **Set your actual live link here after first deploy:** `https://<your-github-username>.github.io/Hansa-and-Hudson-Flashpoints/`
-
-> This project is an educational / portfolio prototype. Severity scores are **notional analyst assessments**, not an official forecast.
+https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
 
 ## What this build includes
 
 - Globe projection with interactive hotspot markers.
 - Threat matrix scoring model (likelihood + impact + status boost).
 - Green → yellow → red severity ramp.
-- Modal “intel card” for each flashpoint (history, events, dates, actors, imagery, and linked sources).
+- Modal “intel card” for each flashpoint (history, events, dates, and sources).
 - Filters for status, region, and minimum severity.
 - Coverage snapshot panel (counts + average severity).
-- Expanded dataset with detailed entries across active conflicts, elevated flashpoints, and frozen disputes in Africa, Europe, the Middle East, Asia-Pacific, and the Americas.
+- Expanded dataset covering active conflicts, elevated flashpoints, and frozen disputes across Africa, Europe, the Middle East, Asia-Pacific, and the Americas.
 
 ## Data model
 
