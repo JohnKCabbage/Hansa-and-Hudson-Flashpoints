@@ -18,6 +18,70 @@ modalBackdrop.addEventListener("click", closeModal);
 
 const statusBoost = { stable_threat: 0.05, frozen: 0.15, elevated: 0.25, active: 0.4 };
 
+const HOTSPOT_SOURCE_ID = "hotspots";
+const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
+const HOTSPOT_LAYER_ID = "hotspots-layer";
+const DEFAULT_BASEMAP = "arcgis";
+const FALLBACK_BASEMAP = "osm";
+const HOTSPOT_DATA_CANDIDATES = [
+  "./data/hotspots.json",
+  "data/hotspots.json",
+  "/data/hotspots.json"
+];
+
+const basemapStyles = {
+  arcgis: {
+    version: 8,
+    name: "ArcGIS World Street Map",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      "esri-street": {
+        type: "raster",
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        attribution: "Tiles © Esri"
+      }
+    },
+    layers: [{ id: "esri-street-layer", type: "raster", source: "esri-street" }]
+  },
+  osm: {
+    version: 8,
+    name: "OpenStreetMap Standard",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      osm: {
+        type: "raster",
+        tiles: [
+          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors"
+      }
+    },
+    layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
+  },
+  cartoDark: {
+    version: 8,
+    name: "Carto Dark Matter",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      carto: {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      }
+    },
+    layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
+  }
+};
+
 const hotspotEnrichment = {
   ukraine_russia: {
     flag: "🇺🇦 🇷🇺",
@@ -48,6 +112,11 @@ const hotspotEnrichment = {
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sana%27a_City%2C_Yemen.jpg/1280px-Sana%27a_City%2C_Yemen.jpg"
   }
 };
+
+let fullFeatureCollection = null;
+let filteredFeatures = [];
+let mapDataReady = false;
+let activeBasemapKey = DEFAULT_BASEMAP;
 
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
@@ -196,6 +265,10 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
+function getBasemapStyle(styleKey) {
+  const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
+  return JSON.parse(JSON.stringify(style));
+}
 const map = new maplibregl.Map({
   container: "map",
   style: "https://tiles.openfreemap.org/styles/liberty",
@@ -315,6 +388,38 @@ function wireFilterHandlers(map) {
   searchInputEl.addEventListener("input", () => applyFilters(map));
 }
 
+function setProjection(map) {
+  const projectionName = projectionEl.checked ? "globe" : "mercator";
+  map.setProjection({ type: projectionName });
+  if (projectionName === "globe") {
+    map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
+  } else {
+    map.setFog(null);
+  }
+}
+
+async function loadHotspotsFromJson() {
+  let hotspots = null;
+  let lastError = null;
+
+  for (const url of HOTSPOT_DATA_CANDIDATES) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) {
+        lastError = new Error(`Failed to load ${url} (${response.status})`);
+        continue;
+      }
+      hotspots = await response.json();
+      console.info(`Hotspot dataset loaded from: ${url}`);
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!hotspots) {
+    throw lastError ?? new Error("Unable to load hotspot dataset from known paths.");
+  }
 map.on("load", async () => {
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
@@ -349,6 +454,7 @@ async function loadHotspotsFromJson() {
   setRegionOptions(features);
 
   const regionsCount = new Set(hotspots.map((h) => h.region)).size;
+  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded directly from JSON.`;
   appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded with geospatial risk metadata.`;
 
   const lastUpdated = hotspots
@@ -362,12 +468,37 @@ async function loadHotspotsFromJson() {
 async function init() {
   const map = new maplibregl.Map({
     container: "map",
+    style: getBasemapStyle(DEFAULT_BASEMAP),
     style: basemapStyles.arcgis,
     center: [5, 24],
     zoom: 1.45,
     projection: "mercator"
   });
 
+  map.addControl(new maplibregl.NavigationControl(), "top-right");
+  wireFilterHandlers(map);
+
+  projectionEl.addEventListener("change", () => setProjection(map));
+
+  basemapEl.addEventListener("change", () => {
+    setBasemap(map, basemapEl.value);
+  });
+
+  map.on("error", (event) => {
+    const message = event?.error?.message ?? "";
+    const failedArcgisLoad = activeBasemapKey === "arcgis" && /tile|source|request|403|404|5\d\d/i.test(message);
+
+    if (failedArcgisLoad) {
+      console.warn("ArcGIS basemap failed, falling back to OSM basemap.", event.error);
+      setBasemap(map, FALLBACK_BASEMAP);
+    }
+  });
+
+  map.on("style.load", () => {
+    ensureHotspotLayers(map);
+    setProjection(map);
+    if (mapDataReady) {
+      applyFilters(map);
   map.addSource("hotspots", { type: "geojson", data: fullFeatureCollection });
 
   map.addLayer({
@@ -413,5 +544,8 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
+  appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
+  updatedAtEl.textContent = "Dataset updated: unavailable";
+  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
   appSubtitleEl.textContent = "Failed to load hotspot data. Check console for details.";
 });

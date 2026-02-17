@@ -14,6 +14,21 @@
       <h1 id="appTitle">Global Flashpoints Monitor</h1>
       <p id="appSubtitle" class="sub">Interactive geopolitical risk globe with live hotspot cards, analysis, and country context.</p>
     </div>
+    <div class="topbarControls">
+      <label class="inlineControl" for="basemapSelect">
+        Basemap
+        <select id="basemapSelect">
+          <option value="arcgis" selected>ArcGIS Streets (default)</option>
+          <option value="osm">OpenStreetMap</option>
+          <option value="cartoDark">Carto Dark</option>
+        </select>
+      </label>
+      <label class="inlineControl inlineToggle" for="projectionToggle">
+        Globe
+        <input id="projectionToggle" type="checkbox" />
+      </label>
+      <p class="small" id="updatedAt">Dataset updated: —</p>
+    </div>
   </header>
 
   <section class="layout">
