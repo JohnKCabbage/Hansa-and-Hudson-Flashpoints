@@ -3,19 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Global Flashpoints Globe</title>
-  <meta name="description" content="Interactive globe showing notional conflict risk across global flashpoints." />
+  <title>Global Flashpoints Monitor</title>
+  <meta name="description" content="Interactive monitor of global conflict flashpoints from JSON data." />
   <link href="https://unpkg.com/maplibre-gl@5.2.0/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header>
+  <header class="topbar">
     <div>
-      <h1>Global Flashpoints Globe</h1>
-      <p class="sub">Portfolio prototype: notional analyst-assessed threat matrix from open-source reporting.</p>
+      <h1 id="appTitle">Global Flashpoints Monitor</h1>
+      <p id="appSubtitle" class="sub">Data-driven view of flashpoint risk from the loaded JSON dataset.</p>
     </div>
+    <p class="small" id="updatedAt">Dataset updated: —</p>
+  </header>
 
-    <div class="panel controls">
+  <section class="layout">
+    <aside class="sidebar panel">
+      <h2>Filter & navigate</h2>
+
       <div class="row">
         <label for="filter">Status</label>
         <select id="filter">
@@ -40,6 +45,18 @@
         <span id="minSevVal" class="hint">0.00</span>
       </div>
 
+      <div class="row">
+        <label for="searchInput">Search</label>
+        <input id="searchInput" type="search" placeholder="Find hotspot by name" />
+      </div>
+
+      <div id="summaryGrid" class="summaryGrid"></div>
+
+      <h3>Hotspots</h3>
+      <ul id="hotspotList" class="hotspotList"></ul>
+    </aside>
+
+    <main class="mapWrap panel">
       <div class="legend">
         <div class="grad"></div>
         <div class="legendLabels">
@@ -48,20 +65,9 @@
           <span>Critical</span>
         </div>
       </div>
-
-      <div class="small">Tip: rotate/zoom globe and click a marker for an intel card.</div>
-    </div>
-
-    <div class="panel stats">
-      <h2>Coverage Snapshot</h2>
-      <ul id="summaryList"></ul>
-      <p class="small" id="updatedAt"></p>
-    </div>
-  </header>
-
-  <main>
-    <div id="map"></div>
-  </main>
+      <div id="map"></div>
+    </main>
+  </section>
 
   <div id="modalBackdrop" class="backdrop hidden"></div>
   <section id="modal" class="modal hidden" aria-hidden="true">

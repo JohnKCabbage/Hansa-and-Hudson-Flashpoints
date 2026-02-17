@@ -4,7 +4,8 @@ Global Flashpoints Globe is a no-backend, GitHub Pages-ready intelligence-style 
 
 ## Live site
 
-https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
+[https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/
+](https://johnkcabbage.github.io/Hansa-and-Hudson-Flashpoints/)
 
 ## What this build includes
 
@@ -46,22 +47,3 @@ Open `index.html` directly, or run a local static server:
 python -m http.server 8000
 # then open http://localhost:8000
 ```
-
-## Deploy to GitHub Pages
-
-This repo includes `.github/workflows/deploy-pages.yml`.
-
-1. Push this repository to GitHub (branch `main`).
-2. In GitHub repo settings, enable **Pages** and set source to **GitHub Actions**.
-3. The workflow will deploy automatically on pushes to `main`.
-4. Replace the placeholder URL above with your exact deployed link.
-
-## Suggested source anchors for curation
-
-- International Crisis Group (major conflicts to watch)
-- ACLED conflict watchlists and event data
-- UN Peacekeeping current operations list and mission updates
-
-## Notes on comprehensiveness
-
-This dataset is designed to feel globally comprehensive for strategic flashpoints, but it is not exhaustive and should be regularly curated.
