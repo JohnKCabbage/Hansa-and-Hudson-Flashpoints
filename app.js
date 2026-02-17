@@ -7,6 +7,8 @@ const summaryGridEl = document.getElementById("summaryGrid");
 const hotspotListEl = document.getElementById("hotspotList");
 const updatedAtEl = document.getElementById("updatedAt");
 const appSubtitleEl = document.getElementById("appSubtitle");
+const basemapEl = document.getElementById("basemapSelect");
+const projectionEl = document.getElementById("projectionToggle");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -129,6 +131,7 @@ function renderSummary(features, filtered) {
 }
 
 function setRegionOptions(features) {
+  regionFilterEl.innerHTML = '<option value="all">All regions</option>';
   const regions = [...new Set(features.map((f) => f.properties.region).filter(Boolean))].sort();
   for (const region of regions) {
     const option = document.createElement("option");
@@ -207,7 +210,7 @@ let filteredFeatures = [];
 function renderHotspotList(features) {
   hotspotListEl.innerHTML = "";
 
-  for (const feature of features.sort((a, b) => b.properties.severity - a.properties.severity)) {
+  for (const feature of [...features].sort((a, b) => b.properties.severity - a.properties.severity)) {
     const li = document.createElement("li");
     const button = document.createElement("button");
     button.className = "hotspotBtn";
@@ -229,8 +232,54 @@ function renderHotspotList(features) {
   }
 }
 
-function applyFilters() {
-  if (!fullFeatureCollection || !map.getSource("hotspots")) {
+function ensureHotspotLayers(map) {
+  if (!map.getSource(HOTSPOT_SOURCE_ID)) {
+    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+
+  if (!map.getLayer(HOTSPOT_GLOW_LAYER_ID)) {
+    map.addLayer({
+      id: HOTSPOT_GLOW_LAYER_ID,
+      type: "circle",
+      source: HOTSPOT_SOURCE_ID,
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 4, 14, 6, 20],
+        "circle-color": ["get", "color"],
+        "circle-opacity": 0.24,
+        "circle-blur": 0.7
+      }
+    });
+  }
+
+  if (!map.getLayer(HOTSPOT_LAYER_ID)) {
+    map.addLayer({
+      id: HOTSPOT_LAYER_ID,
+      type: "circle",
+      source: HOTSPOT_SOURCE_ID,
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 3, 7, 6, 11],
+        "circle-color": ["get", "color"],
+        "circle-stroke-width": 1.2,
+        "circle-stroke-color": "#ffffff",
+        "circle-opacity": 0.96
+      }
+    });
+
+    map.on("click", HOTSPOT_LAYER_ID, (event) => {
+      const feature = event.features?.[0];
+      if (feature) {
+        map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
+        openIntelCard(feature.properties);
+      }
+    });
+
+    map.on("mouseenter", HOTSPOT_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", HOTSPOT_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+  }
+}
+
+function applyFilters(map) {
+  if (!fullFeatureCollection || !map.getSource(HOTSPOT_SOURCE_ID)) {
     return;
   }
 
@@ -248,26 +297,32 @@ function applyFilters() {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  map.getSource("hotspots").setData({ type: "FeatureCollection", features: filteredFeatures });
+  map.getSource(HOTSPOT_SOURCE_ID).setData({ type: "FeatureCollection", features: filteredFeatures });
   renderSummary(fullFeatureCollection.features, filteredFeatures);
-  renderHotspotList(filteredFeatures);
+  renderHotspotList(filteredFeatures, map);
 }
 
-minSevEl.addEventListener("input", () => {
-  minSevValEl.textContent = Number(minSevEl.value).toFixed(2);
-  applyFilters();
-});
-filterEl.addEventListener("change", applyFilters);
-regionFilterEl.addEventListener("change", applyFilters);
-searchInputEl.addEventListener("input", applyFilters);
+function wireFilterHandlers(map) {
+  minSevEl.addEventListener("input", () => {
+    minSevValEl.textContent = Number(minSevEl.value).toFixed(2);
+    applyFilters(map);
+  });
+  filterEl.addEventListener("change", () => applyFilters(map));
+  regionFilterEl.addEventListener("change", () => applyFilters(map));
+  searchInputEl.addEventListener("input", () => applyFilters(map));
+}
 
 map.on("load", async () => {
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
 
-  const response = await fetch("./data/hotspots.json");
-  const hotspots = await response.json();
+async function loadHotspotsFromJson() {
+  const response = await fetch("./data/hotspots.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load hotspots.json (${response.status})`);
+  }
 
+  const hotspots = await response.json();
   const features = hotspots.map((h) => {
     const severity = computeSeverity(h);
     const enrichment = hotspotEnrichment[h.id] ?? {};
@@ -288,6 +343,8 @@ map.on("load", async () => {
   });
 
   fullFeatureCollection = { type: "FeatureCollection", features };
+  setRegionOptions(features);
+
   const regionsCount = new Set(hotspots.map((h) => h.region)).size;
   appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded with geospatial risk metadata.`;
 
@@ -297,8 +354,16 @@ map.on("load", async () => {
     .sort()
     .at(-1);
   updatedAtEl.textContent = `Dataset updated: ${lastUpdated ?? "Unknown"}`;
+}
 
-  setRegionOptions(features);
+async function init() {
+  const map = new maplibregl.Map({
+    container: "map",
+    style: basemapStyles.arcgis,
+    center: [5, 24],
+    zoom: 1.45,
+    projection: "mercator"
+  });
 
   map.addSource("hotspots", { type: "geojson", data: fullFeatureCollection });
 
@@ -334,8 +399,16 @@ map.on("load", async () => {
       openIntelCard(feature.properties);
     }
   });
-  map.on("mouseenter", "hotspots-layer", () => { map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", "hotspots-layer", () => { map.getCanvas().style.cursor = ""; });
 
-  applyFilters();
+  await new Promise((resolve) => map.once("load", resolve));
+
+  await loadHotspotsFromJson();
+  mapDataReady = true;
+  ensureHotspotLayers(map);
+  applyFilters(map);
+}
+
+init().catch((error) => {
+  console.error(error);
+  appSubtitleEl.textContent = "Failed to load hotspot data. Check console for details.";
 });
