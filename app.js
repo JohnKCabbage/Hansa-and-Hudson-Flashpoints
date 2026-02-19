@@ -291,27 +291,23 @@ function normalizeStructuredList(value) {
   }
 }
 
-const FLAG_ICON_OVERRIDES = {
-  UN: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Flag_of_the_United_Nations.svg/640px-Flag_of_the_United_Nations.svg.png",
-    label: "United Nations"
-  },
-  EU: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/640px-Flag_of_Europe.svg.png",
-    label: "European Union"
-  }
+const FLAG_PLACEHOLDER_SRC = "assets/flags/_placeholder.svg";
+
+const FLAG_ICON_LABELS = {
+  UN: "United Nations",
+  EU: "European Union",
+  XK: "Kosovo",
+  EH: "Western Sahara"
 };
 
 function getFlagAsset(code) {
   const normalizedCode = String(code ?? "").toUpperCase();
   if (!normalizedCode) return null;
-  if (FLAG_ICON_OVERRIDES[normalizedCode]) {
-    return { code: normalizedCode, ...FLAG_ICON_OVERRIDES[normalizedCode] };
-  }
   return {
     code: normalizedCode,
-    label: normalizedCode,
-    src: `https://flagcdn.com/w40/${normalizedCode.toLowerCase()}.png`
+    label: FLAG_ICON_LABELS[normalizedCode] ?? normalizedCode,
+    src: `assets/flags/${normalizedCode.toLowerCase()}.png`,
+    fallbackSrc: FLAG_PLACEHOLDER_SRC
   };
 }
 
@@ -369,7 +365,7 @@ function renderFlagsMarkup(value) {
   const codes = normalizeStructuredList(value);
   const assets = codes.map(getFlagAsset).filter(Boolean);
   if (!assets.length) return "";
-  return `<span class="flagSet">${assets.map((asset) => `<img class="flagIcon" src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.label)} flag" title="${escapeHtml(asset.label)}" loading="lazy" referrerpolicy="no-referrer" />`).join("")}</span>`;
+  return `<span class="flagSet">${assets.map((asset) => `<img class="flagIcon" src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.label)} flag" title="${escapeHtml(asset.label)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${escapeHtml(asset.fallbackSrc)}';this.classList.add('flagIconPlaceholder');" />`).join("")}</span>`;
 }
 
 function buildAnalysis(properties) {
