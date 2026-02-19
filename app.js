@@ -278,30 +278,94 @@ function normalizeSources(value) {
   return [];
 }
 
-function inferFlagFromName(name) {
-  const n = String(name).toLowerCase();
-  if (n.includes("ukraine") || n.includes("russia")) return "🇺🇦 🇷🇺";
-  if (n.includes("israel") || n.includes("gaza") || n.includes("palestin")) return "🇮🇱 🇵🇸";
-  if (n.includes("taiwan") || n.includes("china")) return "🇹🇼 🇨🇳";
-  if (n.includes("kashmir") || n.includes("india") || n.includes("pakistan")) return "🇮🇳 🇵🇰";
-  if (n.includes("korea")) return "🇰🇷 🇰🇵";
-  if (n.includes("yemen")) return "🇾🇪";
-  if (n.includes("sudan")) return "🇸🇩";
-  if (n.includes("myanmar")) return "🇲🇲";
-  if (n.includes("congo")) return "🇨🇩";
-  if (n.includes("sahel") || n.includes("mali") || n.includes("niger")) return "🇲🇱 🇳🇪";
-  if (n.includes("haiti")) return "🇭🇹";
-  if (n.includes("ethiopia")) return "🇪🇹";
-  if (n.includes("somalia")) return "🇸🇴";
-  if (n.includes("libya")) return "🇱🇾";
-  if (n.includes("western sahara")) return "🇪🇭";
-  if (n.includes("cyprus")) return "🇨🇾";
-  if (n.includes("kosovo") || n.includes("serbia")) return "🇽🇰 🇷🇸";
-  if (n.includes("armenia") || n.includes("azerbaijan")) return "🇦🇲 🇦🇿";
-  if (n.includes("georgia")) return "🇬🇪";
-  if (n.includes("moldova") || n.includes("transnistria")) return "🇲🇩";
-  if (n.includes("peru")) return "🇵🇪";
-  return "🌐";
+function normalizeStructuredList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const FLAG_PLACEHOLDER_SRC = "assets/flags/_placeholder.svg";
+
+const FLAG_ICON_LABELS = {
+  UN: "United Nations",
+  EU: "European Union",
+  XK: "Kosovo",
+  EH: "Western Sahara"
+};
+
+function getFlagAsset(code) {
+  const normalizedCode = String(code ?? "").toUpperCase();
+  if (!normalizedCode) return null;
+  return {
+    code: normalizedCode,
+    label: FLAG_ICON_LABELS[normalizedCode] ?? normalizedCode,
+    src: `assets/flags/${normalizedCode.toLowerCase()}.png`,
+    fallbackSrc: FLAG_PLACEHOLDER_SRC
+  };
+}
+
+function inferFlagCodesFromHotspot(hotspot) {
+  const mapById = {
+    ukraine: ["UA", "RU"],
+    israel_palestine: ["PS", "IL"],
+    sudan: ["SD"],
+    myanmar: ["MM"],
+    dr_congo: ["CD"],
+    sahel: ["ML", "NE", "BF"],
+    somalia: ["SO"],
+    yemen: ["YE"],
+    syria: ["SY"],
+    haiti: ["HT"],
+    ethiopia_amahara: ["ET"],
+    south_sudan: ["SS"],
+    nigeria: ["NG"],
+    mozambique_cabo: ["MZ"],
+    cameroon_anglophone: ["CM"],
+    kashmir: ["IN", "PK"],
+    taiwan_strait: ["TW", "CN"],
+    south_china_sea: ["CN", "PH", "VN", "MY"],
+    korean_peninsula: ["KR", "KP"],
+    afghanistan: ["AF"],
+    pakistan_ttp: ["PK"],
+    philippines_mindanao: ["PH"],
+    thailand_south: ["TH"],
+    venezuela_guyana: ["VE", "GY"],
+    colombia_armed_groups: ["CO"],
+    ecuador_security: ["EC"],
+    mexico_cartel: ["MX"],
+    red_sea: ["YE", "UN"],
+    iran_israel_shadow: ["IR", "IL"],
+    iraq_syria_isis: ["IQ", "SY"],
+    lebanon_border: ["LB", "IL"],
+    libya: ["LY"],
+    western_sahara: ["EH", "MA"],
+    cyprus: ["CY"],
+    kosovo_serbia: ["XK", "RS"],
+    bosnia_politics: ["BA"],
+    armenia_azerbaijan: ["AM", "AZ"],
+    georgia_abkhazia_ossetia: ["GE"],
+    transnistria: ["MD"],
+    sahrawi_mali_niger: ["EH", "ML", "NE"],
+    lake_chad: ["NG", "NE", "TD", "CM"],
+    peru_internal: ["PE"],
+    south_caucasus_transport: ["AM", "AZ", "GE"]
+  };
+
+  return mapById[hotspot.id] ?? ["UN"];
+}
+
+function renderFlagsMarkup(value) {
+  const codes = normalizeStructuredList(value);
+  const assets = codes.map(getFlagAsset).filter(Boolean);
+  if (!assets.length) return "";
+  return `<span class="flagSet">${assets.map((asset) => `<img class="flagIcon" src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.label)} flag" title="${escapeHtml(asset.label)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${escapeHtml(asset.fallbackSrc)}';this.classList.add('flagIconPlaceholder');" />`).join("")}</span>`;
 }
 
 function buildAnalysis(properties) {
@@ -356,19 +420,165 @@ function setRegionOptions(features) {
   }
 }
 
+
+
+const REPUTABLE_NEWS_SOURCES = [
+  "BBC",
+  "CNN",
+  "New York Times",
+  "Financial Times",
+  "Wall Street Journal",
+  "Reuters",
+  "Associated Press",
+  "The Economist"
+];
+
+function buildHeadlineQuery(properties) {
+  const name = String(properties.name ?? "").replace(/[–—]/g, " ");
+  const region = String(properties.region ?? "");
+  return `${name} ${region}`.trim();
+}
+
+function buildTrustedHeadlineFilterRegex() {
+  const escaped = REPUTABLE_NEWS_SOURCES
+    .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+  return new RegExp(`(${escaped.join("|")})`, "i");
+}
+
+function normalizeHeadlineItems(rawItems) {
+  const trustedRegex = buildTrustedHeadlineFilterRegex();
+  return rawItems
+    .map((item) => ({
+      title: String(item.title ?? "").trim(),
+      link: String(item.link ?? "").trim(),
+      pubDate: String(item.pubDate ?? item.isoDate ?? "").trim(),
+      source: String(item.source ?? "").trim()
+    }))
+    .filter((item) => item.title && item.link)
+    .map((item) => {
+      const sourceFromTitle = item.title.includes(" - ") ? item.title.split(" - ").at(-1).trim() : "";
+      return { ...item, source: item.source || sourceFromTitle || "News" };
+    })
+    .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title));
+}
+
+function parseRssItemsFromText(rssText) {
+  const xml = new DOMParser().parseFromString(rssText, "text/xml");
+  const parseError = xml.querySelector("parsererror");
+  if (parseError) throw new Error("Unable to parse RSS response");
+
+  return [...xml.querySelectorAll("item")].map((item) => ({
+    title: item.querySelector("title")?.textContent ?? "",
+    link: item.querySelector("link")?.textContent ?? "",
+    pubDate: item.querySelector("pubDate")?.textContent ?? "",
+    source: item.querySelector("source")?.textContent ?? ""
+  }));
+}
+
+async function fetchHeadlinesWithFallback(query) {
+  const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
+
+  const providers = [
+    {
+      name: "rss2json-google",
+      url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleFeedUrl)}`,
+      parse: async (response) => {
+        const payload = await response.json();
+        if (payload.status !== "ok") throw new Error("rss2json returned non-ok status");
+        return (payload.items ?? []).map((item) => ({
+          title: item.title,
+          link: item.link,
+          pubDate: item.pubDate,
+          source: item.author || item.source || ""
+        }));
+      }
+    },
+    {
+      name: "allorigins-google",
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(googleFeedUrl)}`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    },
+    {
+      name: "jina-google",
+      url: `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    },
+    {
+      name: "allorigins-bing",
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(bingFeedUrl)}`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    }
+  ];
+
+  const failures = [];
+  for (const provider of providers) {
+    try {
+      const response = await fetch(provider.url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const items = await provider.parse(response);
+      const trustedItems = normalizeHeadlineItems(items).slice(0, 18);
+      if (trustedItems.length) {
+        return { items: trustedItems, provider: provider.name };
+      }
+      failures.push(`${provider.name}: no trusted items`);
+    } catch (error) {
+      failures.push(`${provider.name}: ${error.message}`);
+    }
+  }
+
+  throw new Error(failures.join(" | "));
+}
+
+function renderHeadlines(items, query) {
+  const rail = document.getElementById("headlineRail");
+  if (!rail) return;
+
+  if (!items.length) {
+    rail.innerHTML = `<div class="headlineFallback">No recent trusted headlines found for this hotspot right now. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
+    return;
+  }
+
+  rail.innerHTML = items.map((item) => `
+    <article class="headlineCard">
+      <div class="headlineSource">${escapeHtml(item.source || "News")}</div>
+      <a class="headlineTitle" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title || "Untitled headline")}</a>
+      <div class="headlineMeta">${escapeHtml(item.pubDate || "Recent")}</div>
+    </article>
+  `).join("");
+}
+
+async function loadHeadlinesForHotspot(properties) {
+  const rail = document.getElementById("headlineRail");
+  if (!rail) return;
+
+  const query = buildHeadlineQuery(properties);
+  rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
+
+  try {
+    const { items } = await fetchHeadlinesWithFallback(query);
+    renderHeadlines(items, query);
+  } catch (error) {
+    rail.innerHTML = `<div class="headlineFallback">Headline feed unavailable in this environment. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
+    console.warn("Headline providers failed:", error.message);
+  }
+}
+
 function openIntelCard(properties) {
+  const keyDates = normalizeStructuredList(properties.key_dates);
+  const eventsList = normalizeStructuredList(properties.events);
   const sev = Number(properties.severity).toFixed(2);
-  const dates = (properties.key_dates ?? [])
+  const dates = keyDates
     .map((d) => `<li><b>${escapeHtml(d.date)}</b> — ${escapeHtml(d.note)}</li>`)
     .join("");
-  const events = (properties.events ?? []).map((e) => `<li>${escapeHtml(e)}</li>`).join("");
+  const events = eventsList.map((e) => `<li>${escapeHtml(e)}</li>`).join("");
 
   modalContent.innerHTML = `
     <div class="cardHero">
       <img src="${escapeHtml(properties.image)}" alt="${escapeHtml(properties.name)} context image" referrerpolicy="no-referrer" />
     </div>
     <div class="cardTitle">
-      <h2 style="margin:0">${escapeHtml(properties.flag)} ${escapeHtml(properties.name)}</h2>
+      <h2 style="margin:0">${renderFlagsMarkup(properties.flagCodes)} ${escapeHtml(properties.name)}</h2>
       <span class="badge">${escapeHtml(properties.region ?? "Global")}</span>
       <span class="badge" style="border-color:${properties.color};">${badgeLabel(properties.status)}</span>
       <span class="badge severityPill" style="background:${properties.color};">severity ${sev}</span>
@@ -398,7 +608,15 @@ function openIntelCard(properties) {
     ${normalizeSources(properties.sources).length
       ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(normalizeSources(properties.sources).join(" • "))}</div>`
       : ""}
+
+    <div class="box headlineBox">
+      <div class="eyebrow">Trusted recent headlines</div>
+      <div class="headlineSub">Auto-curated from major outlets for rapid situational awareness.</div>
+      <div id="headlineRail" class="headlineRail" aria-live="polite"></div>
+    </div>
   `;
+
+  loadHeadlinesForHotspot(properties);
 
   modalBackdrop.classList.remove("hidden");
   modal.classList.remove("hidden");
@@ -432,7 +650,7 @@ function renderHotspotList(features, map) {
     button.className = "hotspotBtn";
     button.type = "button";
     button.innerHTML = `
-      <strong>${escapeHtml(feature.properties.flag)} ${escapeHtml(feature.properties.name)}</strong>
+      <strong>${renderFlagsMarkup(feature.properties.flagCodes)} ${escapeHtml(feature.properties.name)}</strong>
       <span class="hotspotMeta">${escapeHtml(feature.properties.region)} · ${badgeLabel(feature.properties.status)} · sev ${Number(feature.properties.severity).toFixed(2)}</span>
     `;
     button.addEventListener("click", () => {
@@ -607,7 +825,7 @@ async function loadHotspotsFromJson() {
       Americas: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Bogota_CBD.jpg/1280px-Bogota_CBD.jpg"
     }[h.region];
     const image = enrichment.image ?? regionFallbackImage ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
-    const flag = enrichment.flag ?? inferFlagFromName(h.name);
+    const flagCodes = enrichment.flagCodes ?? inferFlagCodesFromHotspot(h);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [h.lon, h.lat] },
@@ -615,7 +833,7 @@ async function loadHotspotsFromJson() {
         ...h,
         severity,
         color: severityToColor(severity),
-        flag,
+        flagCodes,
         image,
         analysis: h.analysis ?? buildAnalysis({ ...h, severity })
       }
