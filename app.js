@@ -420,6 +420,74 @@ function setRegionOptions(features) {
   }
 }
 
+
+
+const REPUTABLE_NEWS_SOURCES = [
+  "BBC",
+  "CNN",
+  "New York Times",
+  "Financial Times",
+  "Wall Street Journal",
+  "Reuters",
+  "Associated Press",
+  "The Economist"
+];
+
+function buildHeadlineQuery(properties) {
+  const name = String(properties.name ?? "").replace(/[–—]/g, " ");
+  const region = String(properties.region ?? "");
+  const trusted = REPUTABLE_NEWS_SOURCES.map((source) => `"${source}"`).join(" OR ");
+  return `${name} ${region} (${trusted})`;
+}
+
+function renderHeadlines(items, query) {
+  const rail = document.getElementById("headlineRail");
+  if (!rail) return;
+
+  if (!items.length) {
+    rail.innerHTML = `<div class="headlineFallback">No recent trusted headlines found for this hotspot right now. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
+    return;
+  }
+
+  rail.innerHTML = items.map((item) => `
+    <article class="headlineCard">
+      <div class="headlineSource">${escapeHtml(item.source || "News")}</div>
+      <a class="headlineTitle" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title || "Untitled headline")}</a>
+      <div class="headlineMeta">${escapeHtml(item.pubDate || "Recent")}</div>
+    </article>
+  `).join("");
+}
+
+async function loadHeadlinesForHotspot(properties) {
+  const rail = document.getElementById("headlineRail");
+  if (!rail) return;
+
+  const query = buildHeadlineQuery(properties);
+  rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
+
+  try {
+    const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
+    const response = await fetch(proxyUrl, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Feed request failed (${response.status})`);
+    const rssText = await response.text();
+    const xml = new DOMParser().parseFromString(rssText, "text/xml");
+    const items = [...xml.querySelectorAll("item")].slice(0, 18).map((item) => {
+      const title = item.querySelector("title")?.textContent?.trim() ?? "";
+      const link = item.querySelector("link")?.textContent?.trim() ?? "";
+      const pubDate = item.querySelector("pubDate")?.textContent?.trim() ?? "";
+      const source = item.querySelector("source")?.textContent?.trim()
+        || title.split(" - ").at(-1)
+        || "News";
+      return { title, link, pubDate, source };
+    }).filter((item) => item.link);
+
+    renderHeadlines(items, query);
+  } catch (error) {
+    rail.innerHTML = `<div class="headlineFallback">Headline feed unavailable in this environment. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
+  }
+}
+
 function openIntelCard(properties) {
   const keyDates = normalizeStructuredList(properties.key_dates);
   const eventsList = normalizeStructuredList(properties.events);
@@ -464,7 +532,15 @@ function openIntelCard(properties) {
     ${normalizeSources(properties.sources).length
       ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(normalizeSources(properties.sources).join(" • "))}</div>`
       : ""}
+
+    <div class="box headlineBox">
+      <div class="eyebrow">Trusted recent headlines</div>
+      <div class="headlineSub">Auto-curated from major outlets for rapid situational awareness.</div>
+      <div id="headlineRail" class="headlineRail" aria-live="polite"></div>
+    </div>
   `;
+
+  loadHeadlinesForHotspot(properties);
 
   modalBackdrop.classList.remove("hidden");
   modal.classList.remove("hidden");
