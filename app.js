@@ -278,30 +278,94 @@ function normalizeSources(value) {
   return [];
 }
 
-function inferFlagFromName(name) {
-  const n = String(name).toLowerCase();
-  if (n.includes("ukraine") || n.includes("russia")) return "🇺🇦 🇷🇺";
-  if (n.includes("israel") || n.includes("gaza") || n.includes("palestin")) return "🇮🇱 🇵🇸";
-  if (n.includes("taiwan") || n.includes("china")) return "🇹🇼 🇨🇳";
-  if (n.includes("kashmir") || n.includes("india") || n.includes("pakistan")) return "🇮🇳 🇵🇰";
-  if (n.includes("korea")) return "🇰🇷 🇰🇵";
-  if (n.includes("yemen")) return "🇾🇪";
-  if (n.includes("sudan")) return "🇸🇩";
-  if (n.includes("myanmar")) return "🇲🇲";
-  if (n.includes("congo")) return "🇨🇩";
-  if (n.includes("sahel") || n.includes("mali") || n.includes("niger")) return "🇲🇱 🇳🇪";
-  if (n.includes("haiti")) return "🇭🇹";
-  if (n.includes("ethiopia")) return "🇪🇹";
-  if (n.includes("somalia")) return "🇸🇴";
-  if (n.includes("libya")) return "🇱🇾";
-  if (n.includes("western sahara")) return "🇪🇭";
-  if (n.includes("cyprus")) return "🇨🇾";
-  if (n.includes("kosovo") || n.includes("serbia")) return "🇽🇰 🇷🇸";
-  if (n.includes("armenia") || n.includes("azerbaijan")) return "🇦🇲 🇦🇿";
-  if (n.includes("georgia")) return "🇬🇪";
-  if (n.includes("moldova") || n.includes("transnistria")) return "🇲🇩";
-  if (n.includes("peru")) return "🇵🇪";
-  return "🌐";
+function normalizeStructuredList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const FLAG_PLACEHOLDER_SRC = "assets/flags/_placeholder.svg";
+
+const FLAG_ICON_LABELS = {
+  UN: "United Nations",
+  EU: "European Union",
+  XK: "Kosovo",
+  EH: "Western Sahara"
+};
+
+function getFlagAsset(code) {
+  const normalizedCode = String(code ?? "").toUpperCase();
+  if (!normalizedCode) return null;
+  return {
+    code: normalizedCode,
+    label: FLAG_ICON_LABELS[normalizedCode] ?? normalizedCode,
+    src: `assets/flags/${normalizedCode.toLowerCase()}.png`,
+    fallbackSrc: FLAG_PLACEHOLDER_SRC
+  };
+}
+
+function inferFlagCodesFromHotspot(hotspot) {
+  const mapById = {
+    ukraine: ["UA", "RU"],
+    israel_palestine: ["PS", "IL"],
+    sudan: ["SD"],
+    myanmar: ["MM"],
+    dr_congo: ["CD"],
+    sahel: ["ML", "NE", "BF"],
+    somalia: ["SO"],
+    yemen: ["YE"],
+    syria: ["SY"],
+    haiti: ["HT"],
+    ethiopia_amahara: ["ET"],
+    south_sudan: ["SS"],
+    nigeria: ["NG"],
+    mozambique_cabo: ["MZ"],
+    cameroon_anglophone: ["CM"],
+    kashmir: ["IN", "PK"],
+    taiwan_strait: ["TW", "CN"],
+    south_china_sea: ["CN", "PH", "VN", "MY"],
+    korean_peninsula: ["KR", "KP"],
+    afghanistan: ["AF"],
+    pakistan_ttp: ["PK"],
+    philippines_mindanao: ["PH"],
+    thailand_south: ["TH"],
+    venezuela_guyana: ["VE", "GY"],
+    colombia_armed_groups: ["CO"],
+    ecuador_security: ["EC"],
+    mexico_cartel: ["MX"],
+    red_sea: ["YE", "UN"],
+    iran_israel_shadow: ["IR", "IL"],
+    iraq_syria_isis: ["IQ", "SY"],
+    lebanon_border: ["LB", "IL"],
+    libya: ["LY"],
+    western_sahara: ["EH", "MA"],
+    cyprus: ["CY"],
+    kosovo_serbia: ["XK", "RS"],
+    bosnia_politics: ["BA"],
+    armenia_azerbaijan: ["AM", "AZ"],
+    georgia_abkhazia_ossetia: ["GE"],
+    transnistria: ["MD"],
+    sahrawi_mali_niger: ["EH", "ML", "NE"],
+    lake_chad: ["NG", "NE", "TD", "CM"],
+    peru_internal: ["PE"],
+    south_caucasus_transport: ["AM", "AZ", "GE"]
+  };
+
+  return mapById[hotspot.id] ?? ["UN"];
+}
+
+function renderFlagsMarkup(value) {
+  const codes = normalizeStructuredList(value);
+  const assets = codes.map(getFlagAsset).filter(Boolean);
+  if (!assets.length) return "";
+  return `<span class="flagSet">${assets.map((asset) => `<img class="flagIcon" src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.label)} flag" title="${escapeHtml(asset.label)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${escapeHtml(asset.fallbackSrc)}';this.classList.add('flagIconPlaceholder');" />`).join("")}</span>`;
 }
 
 function buildAnalysis(properties) {
@@ -357,18 +421,20 @@ function setRegionOptions(features) {
 }
 
 function openIntelCard(properties) {
+  const keyDates = normalizeStructuredList(properties.key_dates);
+  const eventsList = normalizeStructuredList(properties.events);
   const sev = Number(properties.severity).toFixed(2);
-  const dates = (properties.key_dates ?? [])
+  const dates = keyDates
     .map((d) => `<li><b>${escapeHtml(d.date)}</b> — ${escapeHtml(d.note)}</li>`)
     .join("");
-  const events = (properties.events ?? []).map((e) => `<li>${escapeHtml(e)}</li>`).join("");
+  const events = eventsList.map((e) => `<li>${escapeHtml(e)}</li>`).join("");
 
   modalContent.innerHTML = `
     <div class="cardHero">
       <img src="${escapeHtml(properties.image)}" alt="${escapeHtml(properties.name)} context image" referrerpolicy="no-referrer" />
     </div>
     <div class="cardTitle">
-      <h2 style="margin:0">${escapeHtml(properties.flag)} ${escapeHtml(properties.name)}</h2>
+      <h2 style="margin:0">${renderFlagsMarkup(properties.flagCodes)} ${escapeHtml(properties.name)}</h2>
       <span class="badge">${escapeHtml(properties.region ?? "Global")}</span>
       <span class="badge" style="border-color:${properties.color};">${badgeLabel(properties.status)}</span>
       <span class="badge severityPill" style="background:${properties.color};">severity ${sev}</span>
@@ -432,7 +498,7 @@ function renderHotspotList(features, map) {
     button.className = "hotspotBtn";
     button.type = "button";
     button.innerHTML = `
-      <strong>${escapeHtml(feature.properties.flag)} ${escapeHtml(feature.properties.name)}</strong>
+      <strong>${renderFlagsMarkup(feature.properties.flagCodes)} ${escapeHtml(feature.properties.name)}</strong>
       <span class="hotspotMeta">${escapeHtml(feature.properties.region)} · ${badgeLabel(feature.properties.status)} · sev ${Number(feature.properties.severity).toFixed(2)}</span>
     `;
     button.addEventListener("click", () => {
@@ -607,7 +673,7 @@ async function loadHotspotsFromJson() {
       Americas: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Bogota_CBD.jpg/1280px-Bogota_CBD.jpg"
     }[h.region];
     const image = enrichment.image ?? regionFallbackImage ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
-    const flag = enrichment.flag ?? inferFlagFromName(h.name);
+    const flagCodes = enrichment.flagCodes ?? inferFlagCodesFromHotspot(h);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [h.lon, h.lat] },
@@ -615,7 +681,7 @@ async function loadHotspotsFromJson() {
         ...h,
         severity,
         color: severityToColor(severity),
-        flag,
+        flagCodes,
         image,
         analysis: h.analysis ?? buildAnalysis({ ...h, severity })
       }

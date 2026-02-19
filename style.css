@@ -110,6 +110,18 @@ select, input {
 .hotspotBtn:hover { border-color: var(--accent); transform: translateY(-1px); }
 .hotspotMeta { color: var(--muted); font-size: 0.78rem; }
 
+.hotspotBtn strong { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cardTitle h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.flagSet {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  max-width: min(100%, 320px);
+  vertical-align: middle;
+}
+.flagIcon { width: 20px; height: 14px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.2); object-fit: cover; background: #fff; flex: 0 0 auto; }
+.flagIconPlaceholder { opacity: 0.78; }
 .mapWrap { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
 .legend { padding: 10px 12px 8px; border-bottom: 1px solid var(--line); }
 .grad { height: 10px; border-radius: 999px; background: linear-gradient(90deg, #3a7e62 0%, #e6cf57 50%, #fa6d4e 100%); }
