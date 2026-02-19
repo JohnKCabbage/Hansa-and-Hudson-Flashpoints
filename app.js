@@ -278,6 +278,19 @@ function normalizeSources(value) {
   return [];
 }
 
+function normalizeStructuredList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function inferFlagFromName(name) {
   const n = String(name).toLowerCase();
   if (n.includes("ukraine") || n.includes("russia")) return "🇺🇦 🇷🇺";
@@ -357,11 +370,13 @@ function setRegionOptions(features) {
 }
 
 function openIntelCard(properties) {
+  const keyDates = normalizeStructuredList(properties.key_dates);
+  const eventsList = normalizeStructuredList(properties.events);
   const sev = Number(properties.severity).toFixed(2);
-  const dates = (properties.key_dates ?? [])
+  const dates = keyDates
     .map((d) => `<li><b>${escapeHtml(d.date)}</b> — ${escapeHtml(d.note)}</li>`)
     .join("");
-  const events = (properties.events ?? []).map((e) => `<li>${escapeHtml(e)}</li>`).join("");
+  const events = eventsList.map((e) => `<li>${escapeHtml(e)}</li>`).join("");
 
   modalContent.innerHTML = `
     <div class="cardHero">
