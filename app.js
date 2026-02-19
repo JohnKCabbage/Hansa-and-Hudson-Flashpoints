@@ -436,8 +436,98 @@ const REPUTABLE_NEWS_SOURCES = [
 function buildHeadlineQuery(properties) {
   const name = String(properties.name ?? "").replace(/[–—]/g, " ");
   const region = String(properties.region ?? "");
-  const trusted = REPUTABLE_NEWS_SOURCES.map((source) => `"${source}"`).join(" OR ");
-  return `${name} ${region} (${trusted})`;
+  return `${name} ${region}`.trim();
+}
+
+function buildTrustedHeadlineFilterRegex() {
+  const escaped = REPUTABLE_NEWS_SOURCES
+    .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+  return new RegExp(`(${escaped.join("|")})`, "i");
+}
+
+function normalizeHeadlineItems(rawItems) {
+  const trustedRegex = buildTrustedHeadlineFilterRegex();
+  return rawItems
+    .map((item) => ({
+      title: String(item.title ?? "").trim(),
+      link: String(item.link ?? "").trim(),
+      pubDate: String(item.pubDate ?? item.isoDate ?? "").trim(),
+      source: String(item.source ?? "").trim()
+    }))
+    .filter((item) => item.title && item.link)
+    .map((item) => {
+      const sourceFromTitle = item.title.includes(" - ") ? item.title.split(" - ").at(-1).trim() : "";
+      return { ...item, source: item.source || sourceFromTitle || "News" };
+    })
+    .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title));
+}
+
+function parseRssItemsFromText(rssText) {
+  const xml = new DOMParser().parseFromString(rssText, "text/xml");
+  const parseError = xml.querySelector("parsererror");
+  if (parseError) throw new Error("Unable to parse RSS response");
+
+  return [...xml.querySelectorAll("item")].map((item) => ({
+    title: item.querySelector("title")?.textContent ?? "",
+    link: item.querySelector("link")?.textContent ?? "",
+    pubDate: item.querySelector("pubDate")?.textContent ?? "",
+    source: item.querySelector("source")?.textContent ?? ""
+  }));
+}
+
+async function fetchHeadlinesWithFallback(query) {
+  const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
+
+  const providers = [
+    {
+      name: "rss2json-google",
+      url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleFeedUrl)}`,
+      parse: async (response) => {
+        const payload = await response.json();
+        if (payload.status !== "ok") throw new Error("rss2json returned non-ok status");
+        return (payload.items ?? []).map((item) => ({
+          title: item.title,
+          link: item.link,
+          pubDate: item.pubDate,
+          source: item.author || item.source || ""
+        }));
+      }
+    },
+    {
+      name: "allorigins-google",
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(googleFeedUrl)}`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    },
+    {
+      name: "jina-google",
+      url: `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    },
+    {
+      name: "allorigins-bing",
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(bingFeedUrl)}`,
+      parse: async (response) => parseRssItemsFromText(await response.text())
+    }
+  ];
+
+  const failures = [];
+  for (const provider of providers) {
+    try {
+      const response = await fetch(provider.url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const items = await provider.parse(response);
+      const trustedItems = normalizeHeadlineItems(items).slice(0, 18);
+      if (trustedItems.length) {
+        return { items: trustedItems, provider: provider.name };
+      }
+      failures.push(`${provider.name}: no trusted items`);
+    } catch (error) {
+      failures.push(`${provider.name}: ${error.message}`);
+    }
+  }
+
+  throw new Error(failures.join(" | "));
 }
 
 function renderHeadlines(items, query) {
@@ -466,25 +556,11 @@ async function loadHeadlinesForHotspot(properties) {
   rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
 
   try {
-    const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
-    const response = await fetch(proxyUrl, { cache: "no-store" });
-    if (!response.ok) throw new Error(`Feed request failed (${response.status})`);
-    const rssText = await response.text();
-    const xml = new DOMParser().parseFromString(rssText, "text/xml");
-    const items = [...xml.querySelectorAll("item")].slice(0, 18).map((item) => {
-      const title = item.querySelector("title")?.textContent?.trim() ?? "";
-      const link = item.querySelector("link")?.textContent?.trim() ?? "";
-      const pubDate = item.querySelector("pubDate")?.textContent?.trim() ?? "";
-      const source = item.querySelector("source")?.textContent?.trim()
-        || title.split(" - ").at(-1)
-        || "News";
-      return { title, link, pubDate, source };
-    }).filter((item) => item.link);
-
+    const { items } = await fetchHeadlinesWithFallback(query);
     renderHeadlines(items, query);
   } catch (error) {
     rail.innerHTML = `<div class="headlineFallback">Headline feed unavailable in this environment. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
+    console.warn("Headline providers failed:", error.message);
   }
 }
 
