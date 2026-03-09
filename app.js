@@ -2,13 +2,14 @@ const filterEl = document.getElementById("filter");
 const regionFilterEl = document.getElementById("regionFilter");
 const minSevEl = document.getElementById("minSev");
 const minSevValEl = document.getElementById("minSevVal");
-const searchInputEl = document.getElementById("searchInput");
+const searchInputEl = document.getElementById("searchInput") ?? document.getElementById("commandInput");
 const summaryGridEl = document.getElementById("summaryGrid");
 const hotspotListEl = document.getElementById("hotspotList");
 const updatedAtEl = document.getElementById("updatedAt");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const basemapEl = document.getElementById("basemapSelect");
 const projectionEl = document.getElementById("projectionToggle");
+const commandInputEl = document.getElementById("commandInput");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -832,7 +833,7 @@ function applyFilters(map) {
   const status = filterEl.value;
   const region = regionFilterEl.value;
   const minSeverity = Number(minSevEl.value);
-  const searchTerm = searchInputEl.value.trim().toLowerCase();
+  const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : "";
 
   filteredFeatures = fullFeatureCollection.features.filter((feature) => {
     const props = feature.properties;
@@ -855,7 +856,8 @@ function wireFilterHandlers(map) {
   });
   filterEl.addEventListener("change", () => applyFilters(map));
   regionFilterEl.addEventListener("change", () => applyFilters(map));
-  searchInputEl.addEventListener("input", () => applyFilters(map));
+  if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
+
 }
 
 function setProjection(map) {
@@ -919,9 +921,6 @@ async function loadHotspotsFromJson() {
   fullFeatureCollection = { type: "FeatureCollection", features };
   setRegionOptions(features);
 
-  const regionsCount = new Set(hotspots.map((h) => h.region)).size;
-  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded directly from JSON.`;
-
   const lastUpdated = hotspots
     .map((h) => h.last_update)
     .filter(Boolean)
@@ -982,7 +981,16 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
-  appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
-  updatedAtEl.textContent = "Dataset updated: unavailable";
-  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
+  const message = String(error?.message ?? "");
+  const likelyDatasetIssue = /hotspot|json|fetch|load/i.test(message);
+
+  if (likelyDatasetIssue) {
+    appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
+    updatedAtEl.textContent = "Dataset updated: unavailable";
+    hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
+    return;
+  }
+
+  updatedAtEl.textContent = "Dataset updated: operational warning";
+  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Interface warning encountered. Core data may still be available; review console details.</li>";
 });
