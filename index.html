@@ -9,10 +9,14 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar panel">
     <div>
-      <h1 id="appTitle">Global Strategic Command Terminal</h1>
-      <p id="appSubtitle" class="sub">Live geopolitical threat grid with tactical map, event logs, and intelligence summaries.</p>
+      <p class="bootline">GLOBAL STRATEGIC COMMAND NETWORK :: NODE 04</p>
+      <div class="titleRow">
+        <img class="titleLogo" src="assets/H&HWatermark.png" alt="H and H emblem" onerror="this.style.display='none'" />
+        <h1 id="appTitle">Global Strategic Command Terminal</h1>
+      </div>
+      <p id="appSubtitle" class="sub">Strategic intelligence dashboard for situational awareness across global conflicts and emerging flashpoints.</p>
     </div>
     <div class="topbarControls">
       <label class="inlineControl" for="basemapSelect">
@@ -36,8 +40,14 @@
 
   <section class="layout">
     <aside class="sidebar panel">
-      <h2>Command Filters</h2>
+      <h2>Command Console</h2>
 
+      <div class="commandRow">
+        <span class="searchIcon" aria-hidden="true">⌕</span>
+        <input id="commandInput" type="search" placeholder="Search hotspots, regions, and threat activity" />
+      </div>
+
+      <h3>Command Filters</h3>
       <div class="row">
         <label for="filter">Status</label>
         <select id="filter">
@@ -62,19 +72,16 @@
         <span id="minSevVal" class="hint">0.00</span>
       </div>
 
-      <div class="row">
-        <label for="searchInput">Search</label>
-        <input id="searchInput" type="search" placeholder="Find hotspot by name" />
-      </div>
 
       <div id="summaryGrid" class="summaryGrid"></div>
-
-      <h3>Targeted Zones</h3>
-      <ul id="hotspotList" class="hotspotList"></ul>
     </aside>
 
     <main class="mapWrap panel">
       <div class="legend">
+        <div class="legendHeader">
+          <span>Threat Spectrum</span>
+          <span class="pulseDot">LIVE</span>
+        </div>
         <div class="grad"></div>
         <div class="legendLabels">
           <span>Stable</span>
@@ -84,6 +91,13 @@
       </div>
       <div id="map"></div>
     </main>
+
+    <aside class="intel panel">
+      <h2>Strategic Data</h2>
+      <p class="smallblock">SELECT A HOTSPOT TO OPEN FULL INTEL CARD</p>
+      <h3>Targeted Zones</h3>
+      <ul id="hotspotList" class="hotspotList"></ul>
+    </aside>
   </section>
 
   <div id="modalBackdrop" class="backdrop hidden"></div>
