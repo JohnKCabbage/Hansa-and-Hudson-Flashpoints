@@ -437,16 +437,53 @@ const NON_PAYWALLED_NEWS_SOURCES = [
 
 const HEADLINE_LOOKBACK_DAYS = 31;
 
+const NON_PAYWALLED_SOURCE_DOMAINS = {
+  "bbc.com": "BBC",
+  "cnn.com": "CNN",
+  "reuters.com": "Reuters",
+  "apnews.com": "Associated Press",
+  "npr.org": "NPR",
+  "aljazeera.com": "Al Jazeera",
+  "theguardian.com": "The Guardian",
+  "cbsnews.com": "CBS News",
+  "abcnews.go.com": "ABC News",
+  "news.sky.com": "Sky News"
+};
+
 function buildHeadlineQuery(properties) {
-  const name = String(properties.name ?? "").replace(/[–—]/g, " ");
-  const region = String(properties.region ?? "");
-  return `${name} ${region}`.trim();
+  const name = String(properties.name ?? "").replace(/[–—]/g, " ").trim();
+  const region = String(properties.region ?? "").trim();
+  const category = String(properties.category ?? "").trim();
+  return [name, region, category].filter(Boolean).join(" ");
 }
 
 function buildTrustedHeadlineFilterRegex() {
   const escaped = NON_PAYWALLED_NEWS_SOURCES
     .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
   return new RegExp(`(${escaped.join("|")})`, "i");
+}
+
+function parseHostFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function inferSourceFromDomain(link) {
+  const host = parseHostFromUrl(link);
+  if (!host) return "";
+
+  const match = Object.entries(NON_PAYWALLED_SOURCE_DOMAINS)
+    .find(([domain]) => host === domain || host.endsWith(`.${domain}`));
+  return match?.[1] ?? "";
+}
+
+function parseGdeltDate(value) {
+  const raw = String(value ?? "").trim();
+  if (!/^\d{14}$/.test(raw)) return "";
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}T${raw.slice(8, 10)}:${raw.slice(10, 12)}:${raw.slice(12, 14)}Z`;
 }
 
 function buildEventKeywordRegex(properties) {
@@ -483,7 +520,8 @@ function normalizeHeadlineItems(rawItems, properties) {
     .filter((item) => item.title && item.link)
     .map((item) => {
       const sourceFromTitle = item.title.includes(" - ") ? item.title.split(" - ").at(-1).trim() : "";
-      return { ...item, source: item.source || sourceFromTitle || "News" };
+      const sourceFromDomain = inferSourceFromDomain(item.link);
+      return { ...item, source: item.source || sourceFromDomain || sourceFromTitle || "News" };
     })
     .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title))
     .filter((item) => isWithinLastMonth(item.pubDate))
@@ -504,10 +542,24 @@ function parseRssItemsFromText(rssText) {
 }
 
 async function fetchHeadlinesWithFallback(query, properties) {
-  const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:${HEADLINE_LOOKBACK_DAYS}d`)}&hl=en-US&gl=US&ceid=US:en`;
   const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
+  const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=75&sort=DateDesc`;
 
   const providers = [
+    {
+      name: "gdelt",
+      url: gdeltUrl,
+      parse: async (response) => {
+        const payload = await response.json();
+        return (payload.articles ?? []).map((item) => ({
+          title: item.title,
+          link: item.url,
+          pubDate: parseGdeltDate(item.seendate),
+          source: item.domain
+        }));
+      }
+    },
     {
       name: "rss2json-google",
       url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleFeedUrl)}`,
@@ -555,7 +607,8 @@ async function fetchHeadlinesWithFallback(query, properties) {
     }
   }
 
-  throw new Error(failures.join(" | "));
+  console.warn("Headline providers exhausted:", failures.join(" | "));
+  return { items: [], provider: "none" };
 }
 
 function renderHeadlines(items, query) {
@@ -583,13 +636,8 @@ async function loadHeadlinesForHotspot(properties) {
   const query = buildHeadlineQuery(properties);
   rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
 
-  try {
-    const { items } = await fetchHeadlinesWithFallback(query, properties);
-    renderHeadlines(items, query);
-  } catch (error) {
-    rail.innerHTML = `<div class="headlineFallback">Headline feed unavailable in this environment. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
-    console.warn("Headline providers failed:", error.message);
-  }
+  const { items } = await fetchHeadlinesWithFallback(query, properties);
+  renderHeadlines(items, query);
 }
 
 function openIntelCard(properties) {
