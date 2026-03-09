@@ -882,7 +882,7 @@ function applyFilters(map) {
   const status = filterEl.value;
   const region = regionFilterEl.value;
   const minSeverity = Number(minSevEl.value);
-  const searchTerm = searchInputEl.value.trim().toLowerCase();
+  const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : "";
 
   filteredFeatures = fullFeatureCollection.features.filter((feature) => {
     const props = feature.properties;
@@ -905,7 +905,7 @@ function wireFilterHandlers(map) {
   });
   filterEl.addEventListener("change", () => applyFilters(map));
   regionFilterEl.addEventListener("change", () => applyFilters(map));
-  searchInputEl.addEventListener("input", () => applyFilters(map));
+  if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
 
 }
 
@@ -1031,7 +1031,16 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
-  appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
-  updatedAtEl.textContent = "Dataset updated: unavailable";
-  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
+  const message = String(error?.message ?? "");
+  const likelyDatasetIssue = /hotspot|json|fetch|load/i.test(message);
+
+  if (likelyDatasetIssue) {
+    appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
+    updatedAtEl.textContent = "Dataset updated: unavailable";
+    hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
+    return;
+  }
+
+  updatedAtEl.textContent = "Dataset updated: operational warning";
+  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Interface warning encountered. Core data may still be available; review console details.</li>";
 });
