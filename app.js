@@ -2,13 +2,14 @@ const filterEl = document.getElementById("filter");
 const regionFilterEl = document.getElementById("regionFilter");
 const minSevEl = document.getElementById("minSev");
 const minSevValEl = document.getElementById("minSevVal");
-const searchInputEl = document.getElementById("searchInput");
+const searchInputEl = document.getElementById("searchInput") ?? document.getElementById("commandInput");
 const summaryGridEl = document.getElementById("summaryGrid");
 const hotspotListEl = document.getElementById("hotspotList");
 const updatedAtEl = document.getElementById("updatedAt");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const basemapEl = document.getElementById("basemapSelect");
 const projectionEl = document.getElementById("projectionToggle");
+const commandInputEl = document.getElementById("commandInput");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -856,6 +857,7 @@ function wireFilterHandlers(map) {
   filterEl.addEventListener("change", () => applyFilters(map));
   regionFilterEl.addEventListener("change", () => applyFilters(map));
   searchInputEl.addEventListener("input", () => applyFilters(map));
+
 }
 
 function setProjection(map) {
@@ -918,9 +920,6 @@ async function loadHotspotsFromJson() {
 
   fullFeatureCollection = { type: "FeatureCollection", features };
   setRegionOptions(features);
-
-  const regionsCount = new Set(hotspots.map((h) => h.region)).size;
-  appSubtitleEl.textContent = `${hotspots.length} hotspots across ${regionsCount} regions, loaded directly from JSON.`;
 
   const lastUpdated = hotspots
     .map((h) => h.last_update)
