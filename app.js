@@ -218,6 +218,55 @@ let arcgisFallbackTriggered = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
 
+function logTerminal(message) {
+  if (!terminalLogEl) return;
+  const line = document.createElement("p");
+  line.innerHTML = `<span style="color:#00ff41">&gt;</span> ${escapeHtml(message)}`;
+  terminalLogEl.prepend(line);
+  while (terminalLogEl.children.length > 10) {
+    terminalLogEl.lastElementChild?.remove();
+  }
+}
+
+function runCommand(map) {
+  if (!commandInputEl) return;
+  const raw = commandInputEl.value.trim();
+  if (!raw) return;
+  const cmd = raw.toLowerCase();
+
+  if (cmd === "clear") {
+    terminalLogEl.innerHTML = "";
+    logTerminal("terminal buffer cleared");
+  } else if (cmd.startsWith("scan ")) {
+    searchInputEl.value = raw.slice(5);
+    applyFilters(map);
+    logTerminal(`scan complete for ${searchInputEl.value}`);
+  } else if (cmd.startsWith("filter status ")) {
+    const status = cmd.replace("filter status ", "").trim();
+    if (["all", "active", "elevated", "frozen", "stable_threat"].includes(status)) {
+      filterEl.value = status;
+      applyFilters(map);
+      logTerminal(`status filter set to ${status}`);
+    } else {
+      logTerminal("invalid status filter");
+    }
+  } else if (cmd.startsWith("filter region ")) {
+    const region = raw.replace(/filter region\s+/i, "").trim();
+    const option = [...regionFilterEl.options].find((o) => o.value.toLowerCase() === region.toLowerCase());
+    if (option) {
+      regionFilterEl.value = option.value;
+      applyFilters(map);
+      logTerminal(`region filter set to ${option.value}`);
+    } else {
+      logTerminal("region not found");
+    }
+  } else {
+    logTerminal("unknown command :: try scan <term> | filter status <value> | filter region <value> | clear");
+  }
+
+  commandInputEl.value = "";
+}
+
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
 function computeSeverity(h) {
@@ -927,6 +976,7 @@ async function loadHotspotsFromJson() {
     .sort()
     .at(-1);
   updatedAtEl.textContent = `Dataset updated: ${lastUpdated ?? "Unknown"}`;
+  logTerminal(`dataset loaded :: ${hotspots.length} hotspots indexed`);
 }
 
 async function init() {
