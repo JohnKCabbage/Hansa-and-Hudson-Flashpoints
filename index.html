@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar panel">
     <div>
+      <p class="bootline">GLOBAL STRATEGIC COMMAND NETWORK :: NODE 04</p>
       <h1 id="appTitle">Global Strategic Command Terminal</h1>
       <p id="appSubtitle" class="sub">Live geopolitical threat grid with tactical map, event logs, and intelligence summaries.</p>
     </div>
@@ -36,8 +37,16 @@
 
   <section class="layout">
     <aside class="sidebar panel">
-      <h2>Command Filters</h2>
+      <h2>Command Console</h2>
 
+      <div class="commandRow">
+        <span>&gt;</span>
+        <input id="commandInput" type="text" placeholder="Type command: scan active | filter region asia-pacific | clear" />
+        <button id="runCommand" type="button">Execute</button>
+      </div>
+      <div id="terminalLog" class="terminalLog" aria-live="polite"></div>
+
+      <h3>Command Filters</h3>
       <div class="row">
         <label for="filter">Status</label>
         <select id="filter">
@@ -68,13 +77,14 @@
       </div>
 
       <div id="summaryGrid" class="summaryGrid"></div>
-
-      <h3>Targeted Zones</h3>
-      <ul id="hotspotList" class="hotspotList"></ul>
     </aside>
 
     <main class="mapWrap panel">
       <div class="legend">
+        <div class="legendHeader">
+          <span>Threat Spectrum</span>
+          <span class="pulseDot">LIVE</span>
+        </div>
         <div class="grad"></div>
         <div class="legendLabels">
           <span>Stable</span>
@@ -84,6 +94,13 @@
       </div>
       <div id="map"></div>
     </main>
+
+    <aside class="intel panel">
+      <h2>Strategic Data</h2>
+      <p class="smallblock">SELECT A HOTSPOT TO OPEN FULL INTEL CARD</p>
+      <h3>Targeted Zones</h3>
+      <ul id="hotspotList" class="hotspotList"></ul>
+    </aside>
   </section>
 
   <div id="modalBackdrop" class="backdrop hidden"></div>
