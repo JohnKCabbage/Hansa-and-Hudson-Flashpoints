@@ -422,16 +422,20 @@ function setRegionOptions(features) {
 
 
 
-const REPUTABLE_NEWS_SOURCES = [
+const NON_PAYWALLED_NEWS_SOURCES = [
   "BBC",
   "CNN",
-  "New York Times",
-  "Financial Times",
-  "Wall Street Journal",
   "Reuters",
   "Associated Press",
-  "The Economist"
+  "NPR",
+  "Al Jazeera",
+  "The Guardian",
+  "CBS News",
+  "ABC News",
+  "Sky News"
 ];
+
+const HEADLINE_LOOKBACK_DAYS = 31;
 
 function buildHeadlineQuery(properties) {
   const name = String(properties.name ?? "").replace(/[–—]/g, " ");
@@ -440,13 +444,35 @@ function buildHeadlineQuery(properties) {
 }
 
 function buildTrustedHeadlineFilterRegex() {
-  const escaped = REPUTABLE_NEWS_SOURCES
+  const escaped = NON_PAYWALLED_NEWS_SOURCES
     .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
   return new RegExp(`(${escaped.join("|")})`, "i");
 }
 
-function normalizeHeadlineItems(rawItems) {
+function buildEventKeywordRegex(properties) {
+  const rawTokens = [properties.name, properties.region, properties.category]
+    .flatMap((value) => String(value ?? "").toLowerCase().split(/[^a-z0-9]+/i))
+    .filter((token) => token.length > 2);
+  const uniqueTokens = [...new Set(rawTokens)];
+  if (!uniqueTokens.length) return null;
+
+  const escaped = uniqueTokens
+    .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`\\b(${escaped.join("|")})\\b`, "i");
+}
+
+function isWithinLastMonth(pubDate) {
+  const published = Date.parse(pubDate);
+  if (!Number.isFinite(published)) return false;
+
+  const lookbackMs = HEADLINE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+  return Date.now() - published <= lookbackMs;
+}
+
+function normalizeHeadlineItems(rawItems, properties) {
   const trustedRegex = buildTrustedHeadlineFilterRegex();
+  const eventKeywordRegex = buildEventKeywordRegex(properties);
+
   return rawItems
     .map((item) => ({
       title: String(item.title ?? "").trim(),
@@ -459,7 +485,9 @@ function normalizeHeadlineItems(rawItems) {
       const sourceFromTitle = item.title.includes(" - ") ? item.title.split(" - ").at(-1).trim() : "";
       return { ...item, source: item.source || sourceFromTitle || "News" };
     })
-    .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title));
+    .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title))
+    .filter((item) => isWithinLastMonth(item.pubDate))
+    .filter((item) => !eventKeywordRegex || eventKeywordRegex.test(item.title));
 }
 
 function parseRssItemsFromText(rssText) {
@@ -475,7 +503,7 @@ function parseRssItemsFromText(rssText) {
   }));
 }
 
-async function fetchHeadlinesWithFallback(query) {
+async function fetchHeadlinesWithFallback(query, properties) {
   const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
   const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
 
@@ -517,7 +545,7 @@ async function fetchHeadlinesWithFallback(query) {
       const response = await fetch(provider.url, { cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const items = await provider.parse(response);
-      const trustedItems = normalizeHeadlineItems(items).slice(0, 18);
+      const trustedItems = normalizeHeadlineItems(items, properties).slice(0, 18);
       if (trustedItems.length) {
         return { items: trustedItems, provider: provider.name };
       }
@@ -556,7 +584,7 @@ async function loadHeadlinesForHotspot(properties) {
   rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
 
   try {
-    const { items } = await fetchHeadlinesWithFallback(query);
+    const { items } = await fetchHeadlinesWithFallback(query, properties);
     renderHeadlines(items, query);
   } catch (error) {
     rail.innerHTML = `<div class="headlineFallback">Headline feed unavailable in this environment. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
