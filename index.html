@@ -11,9 +11,9 @@
 <body>
   <header class="topbar panel">
     <div>
-      <p class="bootline">Hansa and Hudson Flashpoint Terminal</p>
-      <h1 id="appTitle">Global Flashpoints Monitor</h1>
-      <p id="appSubtitle" class="sub">Live geopolitical threat grid with tactical map, event logs, and intelligence summaries.</p>
+      <p class="bootline">GLOBAL STRATEGIC COMMAND NETWORK :: NODE 04</p>
+      <h1 id="appTitle">Global Strategic Command Terminal</h1>
+      <p id="appSubtitle" class="sub">Strategic intelligence dashboard for situational awareness across global conflicts and emerging flashpoints.</p>
     </div>
     <div class="topbarControls">
       <label class="inlineControl" for="basemapSelect">
@@ -40,11 +40,9 @@
       <h2>Command Console</h2>
 
       <div class="commandRow">
-        <span>&gt;</span>
-        <input id="commandInput" type="text" placeholder="Type command: scan active | filter region asia-pacific | clear" />
-        <button id="runCommand" type="button">Execute</button>
+        <span class="searchIcon" aria-hidden="true">⌕</span>
+        <input id="commandInput" type="search" placeholder="Search hotspots, regions, and threat activity" />
       </div>
-      <div id="terminalLog" class="terminalLog" aria-live="polite"></div>
 
       <h3>Command Filters</h3>
       <div class="row">
@@ -71,10 +69,6 @@
         <span id="minSevVal" class="hint">0.00</span>
       </div>
 
-      <div class="row">
-        <label for="searchInput">Search</label>
-        <input id="searchInput" type="search" placeholder="Find hotspot by name" />
-      </div>
 
       <div id="summaryGrid" class="summaryGrid"></div>
     </aside>
