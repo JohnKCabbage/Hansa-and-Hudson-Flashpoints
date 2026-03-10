@@ -159,7 +159,7 @@ button:hover { border-color: var(--accent); }
 }
 @media (max-width: 900px) {
 
-  .titleLogo { width: 52px; height: 52px; }
+  .titleLogo { width: 120px; height: 120px; }
   .topbar { flex-direction: column; }
   .topbarControls { justify-content: flex-start; }
   .layout { grid-template-columns: 1fr; }
