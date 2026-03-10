@@ -51,6 +51,25 @@ const CUSTOM_DARK_STYLE = {
   ]
 };
 
+const FALLBACK_DARK_STYLE = {
+  version: 8,
+  name: "Fallback Dark Raster",
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  sources: {
+    cartoDarkFallback: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors © CARTO"
+    }
+  },
+  layers: [{ id: "carto-dark-fallback-layer", type: "raster", source: "cartoDarkFallback" }]
+};
+
 const hotspotEnrichment = {
   ukraine_russia: {
     flag: "🇺🇦 🇷🇺",
@@ -148,6 +167,7 @@ let activeMapFeatures = [];
 let mapDataReady = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
+let styleFallbackTriggered = false;
 
 function logTerminal(message) {
   if (!terminalLogEl) return;
@@ -700,6 +720,10 @@ function getBasemapStyle() {
   return JSON.parse(JSON.stringify(CUSTOM_DARK_STYLE));
 }
 
+function getFallbackStyle() {
+  return JSON.parse(JSON.stringify(FALLBACK_DARK_STYLE));
+}
+
 function renderHotspotList(features, map) {
   hotspotListEl.innerHTML = "";
 
@@ -950,6 +974,20 @@ async function init() {
   projectionEl.addEventListener("change", () => {
     setProjection(map);
     refreshHotspotVisuals(map);
+  });
+
+
+  map.on("error", (event) => {
+    const message = String(event?.error?.message ?? "");
+    const sourceId = String(event?.sourceId ?? "");
+    const failedPrimaryTiles = sourceId.includes("openmaptiles")
+      && /(403|404|5\d\d|failed|fetch|tile|cors|network)/i.test(message);
+
+    if (failedPrimaryTiles && !styleFallbackTriggered) {
+      styleFallbackTriggered = true;
+      console.warn("Primary OpenMapTiles style failed; switching to fallback dark raster style.", event.error);
+      map.setStyle(getFallbackStyle());
+    }
   });
 
 
