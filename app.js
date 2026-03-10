@@ -7,9 +7,9 @@ const summaryGridEl = document.getElementById("summaryGrid");
 const hotspotListEl = document.getElementById("hotspotList");
 const updatedAtEl = document.getElementById("updatedAt");
 const appSubtitleEl = document.getElementById("appSubtitle");
-const basemapEl = document.getElementById("basemapSelect");
 const projectionEl = document.getElementById("projectionToggle");
 const commandInputEl = document.getElementById("commandInput");
+const terminalLogEl = document.getElementById("terminalLog");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -23,100 +23,51 @@ const HOTSPOT_SOURCE_ID = "hotspots";
 const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
 const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
-const DEFAULT_BASEMAP = "arcgis";
-const FALLBACK_BASEMAP = "osm";
 const HOTSPOT_DATA_CANDIDATES = [
   "./data/hotspots.json",
   "data/hotspots.json",
   "/data/hotspots.json"
 ];
 
-const basemapStyles = {
-  arcgis: {
-    version: 8,
-    name: "ArcGIS World Street Map",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      "esri-street": {
-        type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri"
-      }
-    },
-    layers: [{ id: "esri-street-layer", type: "raster", source: "esri-street" }]
+const CUSTOM_DARK_STYLE = {
+  version: 8,
+  name: "OpenMapTiles Terminal Dark",
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  sources: {
+    openmaptiles: {
+      type: "vector",
+      url: "https://demotiles.maplibre.org/tiles/tiles.json"
+    }
   },
-  osm: {
-    version: 8,
-    name: "OpenStreetMap Standard",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors"
-      }
-    },
-    layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
+  layers: [
+    { id: "background", type: "background", paint: { "background-color": "#050b14" } },
+    { id: "water", type: "fill", source: "openmaptiles", "source-layer": "water", paint: { "fill-color": "#091a2b" } },
+    { id: "landcover", type: "fill", source: "openmaptiles", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], "forest", "#0f221d", "wood", "#12261f", "grass", "#1a2a22", "#101920"] } },
+    { id: "landuse", type: "fill", source: "openmaptiles", "source-layer": "landuse", paint: { "fill-color": ["match", ["get", "class"], "residential", "#1a1f28", "industrial", "#22222a", "park", "#13271c", "#171d26"], "fill-opacity": 0.65 } },
+    { id: "countries-fill", type: "fill", source: "openmaptiles", "source-layer": "boundary", filter: ["==", ["get", "admin_level"], 2], paint: { "fill-color": ["interpolate", ["linear"], ["mod", ["id"], 6], 0, "#1e2a3a", 1, "#2a2337", 2, "#1f3530", 3, "#332a2c", 4, "#27333d", 5, "#2f2f35"], "fill-opacity": 0.2 } },
+    { id: "borders", type: "line", source: "openmaptiles", "source-layer": "boundary", paint: { "line-color": "#21c76a", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.4, 4, 1, 8, 1.6], "line-opacity": 0.8 } },
+    { id: "transportation", type: "line", source: "openmaptiles", "source-layer": "transportation", paint: { "line-color": "#2c3948", "line-width": 0.6, "line-opacity": 0.6 } },
+    { id: "place-labels", type: "symbol", source: "openmaptiles", "source-layer": "place", layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 5, 12, 8, 14] }, paint: { "text-color": "#b8bec9", "text-halo-color": "#0c1218", "text-halo-width": 1.1 } }
+  ]
+};
+
+const FALLBACK_DARK_STYLE = {
+  version: 8,
+  name: "Fallback Dark Raster",
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  sources: {
+    cartoDarkFallback: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors © CARTO"
+    }
   },
-  cartoVoyager: {
-    version: 8,
-    name: "Carto Voyager",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      cartoVoyager: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [{ id: "carto-voyager-layer", type: "raster", source: "cartoVoyager" }]
-  },
-  cartoDark: {
-    version: 8,
-    name: "Carto Dark Matter",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      carto: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
-  },
-  stamenTonerLite: {
-    version: 8,
-    name: "Stamen Toner Lite",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      stamen: {
-        type: "raster",
-        tiles: [
-          "https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
-      }
-    },
-    layers: [{ id: "stamen-toner-lite-layer", type: "raster", source: "stamen" }]
-  },
-  libreDemo: "https://demotiles.maplibre.org/style.json"
+  layers: [{ id: "carto-dark-fallback-layer", type: "raster", source: "cartoDarkFallback" }]
 };
 
 const hotspotEnrichment = {
@@ -212,11 +163,11 @@ const hotspotEnrichment = {
 
 let fullFeatureCollection = null;
 let filteredFeatures = [];
+let activeMapFeatures = [];
 let mapDataReady = false;
-let activeBasemapKey = DEFAULT_BASEMAP;
-let arcgisFallbackTriggered = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
+let styleFallbackTriggered = false;
 
 function logTerminal(message) {
   if (!terminalLogEl) return;
@@ -235,7 +186,7 @@ function runCommand(map) {
   const cmd = raw.toLowerCase();
 
   if (cmd === "clear") {
-    terminalLogEl.innerHTML = "";
+    if (terminalLogEl) terminalLogEl.innerHTML = "";
     logTerminal("terminal buffer cleared");
   } else if (cmd.startsWith("scan ")) {
     searchInputEl.value = raw.slice(5);
@@ -755,16 +706,22 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
-function getBasemapStyle(styleKey) {
-  const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
-  return typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
+function getActiveFeaturesForMap() {
+  return activeMapFeatures;
 }
 
-function setBasemap(map, styleKey) {
-  activeBasemapKey = basemapStyles[styleKey] ? styleKey : DEFAULT_BASEMAP;
-  arcgisFallbackTriggered = false;
-  basemapEl.value = activeBasemapKey;
-  map.setStyle(getBasemapStyle(activeBasemapKey));
+function syncHotspotSource(map) {
+  const source = map.getSource(HOTSPOT_SOURCE_ID);
+  if (!source) return;
+  source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
+}
+
+function getBasemapStyle() {
+  return JSON.parse(JSON.stringify(CUSTOM_DARK_STYLE));
+}
+
+function getFallbackStyle() {
+  return JSON.parse(JSON.stringify(FALLBACK_DARK_STYLE));
 }
 
 function renderHotspotList(features, map) {
@@ -794,7 +751,7 @@ function renderHotspotList(features, map) {
 
 function ensureHotspotLayers(map) {
   if (!map.getSource(HOTSPOT_SOURCE_ID)) {
-    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: getActiveFeaturesForMap() } });
   }
 
   if (!map.getLayer(HOTSPOT_GLOW_LAYER_ID)) {
@@ -839,6 +796,8 @@ function ensureHotspotLayers(map) {
     });
   }
 
+  syncHotspotSource(map);
+
   if (!hotspotInteractionBound) {
     hotspotInteractionBound = true;
 
@@ -875,7 +834,7 @@ function ensureHotspotLayers(map) {
 }
 
 function applyFilters(map) {
-  if (!fullFeatureCollection || !map.getSource(HOTSPOT_SOURCE_ID)) {
+  if (!fullFeatureCollection) {
     return;
   }
 
@@ -893,7 +852,8 @@ function applyFilters(map) {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  map.getSource(HOTSPOT_SOURCE_ID).setData({ type: "FeatureCollection", features: filteredFeatures });
+  activeMapFeatures = filteredFeatures;
+  syncHotspotSource(map);
   renderSummary(fullFeatureCollection.features, filteredFeatures);
   renderHotspotList(filteredFeatures, map);
 }
@@ -907,6 +867,22 @@ function wireFilterHandlers(map) {
   regionFilterEl.addEventListener("change", () => applyFilters(map));
   if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
 
+}
+
+function resetFiltersToDefaults() {
+  filterEl.value = "all";
+  regionFilterEl.value = "all";
+  minSevEl.value = "0";
+  minSevValEl.textContent = "0.00";
+  if (searchInputEl) searchInputEl.value = "";
+  if (commandInputEl) commandInputEl.value = "";
+}
+
+function refreshHotspotVisuals(map) {
+  ensureHotspotLayers(map);
+  if (mapDataReady) {
+    applyFilters(map);
+  }
 }
 
 function setProjection(map) {
@@ -968,6 +944,8 @@ async function loadHotspotsFromJson() {
   });
 
   fullFeatureCollection = { type: "FeatureCollection", features };
+  filteredFeatures = features;
+  activeMapFeatures = features;
   setRegionOptions(features);
 
   const lastUpdated = hotspots
@@ -982,7 +960,7 @@ async function loadHotspotsFromJson() {
 async function init() {
   const map = new maplibregl.Map({
     container: "map",
-    style: getBasemapStyle(DEFAULT_BASEMAP),
+    style: getBasemapStyle(),
     center: [5, 24],
     zoom: 1.45,
     projection: "mercator"
@@ -993,40 +971,37 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   wireFilterHandlers(map);
 
-  projectionEl.addEventListener("change", () => setProjection(map));
-
-  basemapEl.addEventListener("change", () => {
-    setBasemap(map, basemapEl.value);
+  projectionEl.addEventListener("change", () => {
+    setProjection(map);
+    refreshHotspotVisuals(map);
   });
+
 
   map.on("error", (event) => {
     const message = String(event?.error?.message ?? "");
     const sourceId = String(event?.sourceId ?? "");
-    const arcgisRequestFailure = /arcgis|esri|world_street_map|rest\/services\/world_street_map/i.test(message + sourceId)
-      && /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
+    const failedPrimaryTiles = sourceId.includes("openmaptiles")
+      && /(403|404|5\d\d|failed|fetch|tile|cors|network)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === "arcgis" && !arcgisFallbackTriggered && !mapDataReady && arcgisRequestFailure;
-    if (shouldFallback) {
-      arcgisFallbackTriggered = true;
-      console.warn("ArcGIS basemap request failed in this environment; falling back to OSM.", event.error);
-      setBasemap(map, FALLBACK_BASEMAP);
+    if (failedPrimaryTiles && !styleFallbackTriggered) {
+      styleFallbackTriggered = true;
+      console.warn("Primary OpenMapTiles style failed; switching to fallback dark raster style.", event.error);
+      map.setStyle(getFallbackStyle());
     }
   });
 
+
   map.on("style.load", () => {
-    ensureHotspotLayers(map);
     setProjection(map);
-    if (mapDataReady) {
-      applyFilters(map);
-    }
+    refreshHotspotVisuals(map);
   });
 
   await new Promise((resolve) => map.once("load", resolve));
 
   await loadHotspotsFromJson();
+  resetFiltersToDefaults();
   mapDataReady = true;
-  ensureHotspotLayers(map);
-  applyFilters(map);
+  refreshHotspotVisuals(map);
 }
 
 init().catch((error) => {
