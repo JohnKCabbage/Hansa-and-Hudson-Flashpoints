@@ -70,6 +70,10 @@ h1::before { content: "> "; }
 .small { margin: 2px 0 0; color: var(--muted); font-size: .8rem; }
 .small::before { content: "SYS TSTAMP: "; color: var(--ink); }
 .topbarControls .titleLogo { order: 99; margin-left: 8px; }
+/* Conflict-safe logo placement: if both legacy and new logo nodes exist after merge,
+   hide the old title-row logo and keep only the rightmost controls logo visible. */
+.titleRow .titleLogo { display: none; }
+.topbarControls .titleLogo:not(:last-of-type) { display: none; }
 
 .layout {
   display: grid;
