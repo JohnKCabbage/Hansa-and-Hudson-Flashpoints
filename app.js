@@ -898,6 +898,13 @@ function resetFiltersToDefaults() {
   if (commandInputEl) commandInputEl.value = "";
 }
 
+function refreshHotspotVisuals(map) {
+  ensureHotspotLayers(map);
+  if (mapDataReady) {
+    applyFilters(map);
+  }
+}
+
 function setProjection(map) {
   const projectionName = projectionEl.checked ? "globe" : "mercator";
   map.setProjection({ type: projectionName });
@@ -984,7 +991,10 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   wireFilterHandlers(map);
 
-  projectionEl.addEventListener("change", () => setProjection(map));
+  projectionEl.addEventListener("change", () => {
+    setProjection(map);
+    refreshHotspotVisuals(map);
+  });
 
   basemapEl.addEventListener("change", () => {
     setBasemap(map, basemapEl.value);
@@ -1011,11 +1021,8 @@ async function init() {
   });
 
   map.on("style.load", () => {
-    ensureHotspotLayers(map);
     setProjection(map);
-    if (mapDataReady) {
-      syncHotspotSource(map);
-    }
+    refreshHotspotVisuals(map);
   });
 
   await new Promise((resolve) => map.once("load", resolve));
@@ -1023,8 +1030,7 @@ async function init() {
   await loadHotspotsFromJson();
   resetFiltersToDefaults();
   mapDataReady = true;
-  ensureHotspotLayers(map);
-  applyFilters(map);
+  refreshHotspotVisuals(map);
 }
 
 init().catch((error) => {
