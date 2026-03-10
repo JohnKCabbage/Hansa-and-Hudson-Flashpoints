@@ -10,6 +10,7 @@ const appSubtitleEl = document.getElementById("appSubtitle");
 const basemapEl = document.getElementById("basemapSelect");
 const projectionEl = document.getElementById("projectionToggle");
 const commandInputEl = document.getElementById("commandInput");
+const terminalLogEl = document.getElementById("terminalLog");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -45,7 +46,7 @@ const basemapStyles = {
           "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "Tiles © Esri"
+        attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
     layers: [{ id: "carto-dark-layer", type: "raster", source: "cartoDark" }]
@@ -202,7 +203,7 @@ function runCommand(map) {
   const cmd = raw.toLowerCase();
 
   if (cmd === "clear") {
-    terminalLogEl.innerHTML = "";
+    if (terminalLogEl) terminalLogEl.innerHTML = "";
     logTerminal("terminal buffer cleared");
   } else if (cmd.startsWith("scan ")) {
     searchInputEl.value = raw.slice(5);
