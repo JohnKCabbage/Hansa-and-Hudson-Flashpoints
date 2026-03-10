@@ -82,27 +82,35 @@ const basemapStyles = {
     },
     layers: [{ id: "esri-dark-gray-layer", type: "raster", source: "esriDarkGray" }]
   },
-  esriDarkGrayLabels: {
+  cartoDarkLabels: {
     version: 8,
-    name: "Esri World Dark Gray (with labels)",
+    name: "Carto Dark Matter (with labels)",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      esriDarkGrayBase: {
+      cartoDarkNoLabels: {
         type: "raster",
-        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+        tiles: [
+          "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
+        ],
         tileSize: 256,
-        attribution: "Tiles © Esri"
+        attribution: "© OpenStreetMap contributors © CARTO"
       },
-      esriDarkGrayReference: {
+      cartoDarkOnlyLabels: {
         type: "raster",
-        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
+        tiles: [
+          "https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png"
+        ],
         tileSize: 256,
-        attribution: "Tiles © Esri"
+        attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
     layers: [
-      { id: "esri-dark-gray-base-layer", type: "raster", source: "esriDarkGrayBase" },
-      { id: "esri-dark-gray-reference-layer", type: "raster", source: "esriDarkGrayReference" }
+      { id: "carto-dark-base-layer", type: "raster", source: "cartoDarkNoLabels" },
+      { id: "carto-dark-labels-layer", type: "raster", source: "cartoDarkOnlyLabels" }
     ]
   }
 };
@@ -200,6 +208,7 @@ const hotspotEnrichment = {
 
 let fullFeatureCollection = null;
 let filteredFeatures = [];
+let activeMapFeatures = [];
 let mapDataReady = false;
 let activeBasemapKey = DEFAULT_BASEMAP;
 let basemapFallbackTriggered = false;
@@ -743,20 +752,14 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
-function hasActiveFilters() {
-  const statusActive = filterEl.value !== "all";
-  const regionActive = regionFilterEl.value !== "all";
-  const minSeverityActive = Number(minSevEl.value) > 0;
-  const searchActive = Boolean(searchInputEl?.value?.trim());
-  return statusActive || regionActive || minSeverityActive || searchActive;
+function getActiveFeaturesForMap() {
+  return activeMapFeatures;
 }
 
-function getActiveFeaturesForMap() {
-  const allFeatures = fullFeatureCollection?.features ?? [];
-  if (!mapDataReady) {
-    return allFeatures;
-  }
-  return hasActiveFilters() ? filteredFeatures : allFeatures;
+function syncHotspotSource(map) {
+  const source = map.getSource(HOTSPOT_SOURCE_ID);
+  if (!source) return;
+  source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
 }
 
 function getBasemapStyle(styleKey) {
@@ -843,10 +846,7 @@ function ensureHotspotLayers(map) {
     });
   }
 
-  const source = map.getSource(HOTSPOT_SOURCE_ID);
-  if (source) {
-    source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
-  }
+  syncHotspotSource(map);
 
   if (!hotspotInteractionBound) {
     hotspotInteractionBound = true;
@@ -902,10 +902,8 @@ function applyFilters(map) {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  const hotspotSource = map.getSource(HOTSPOT_SOURCE_ID);
-  if (hotspotSource) {
-    hotspotSource.setData({ type: "FeatureCollection", features: filteredFeatures });
-  }
+  activeMapFeatures = filteredFeatures;
+  syncHotspotSource(map);
   renderSummary(fullFeatureCollection.features, filteredFeatures);
   renderHotspotList(filteredFeatures, map);
 }
@@ -919,6 +917,15 @@ function wireFilterHandlers(map) {
   regionFilterEl.addEventListener("change", () => applyFilters(map));
   if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
 
+}
+
+function resetFiltersToDefaults() {
+  filterEl.value = "all";
+  regionFilterEl.value = "all";
+  minSevEl.value = "0";
+  minSevValEl.textContent = "0.00";
+  if (searchInputEl) searchInputEl.value = "";
+  if (commandInputEl) commandInputEl.value = "";
 }
 
 function setProjection(map) {
@@ -980,6 +987,8 @@ async function loadHotspotsFromJson() {
   });
 
   fullFeatureCollection = { type: "FeatureCollection", features };
+  filteredFeatures = features;
+  activeMapFeatures = features;
   setRegionOptions(features);
 
   const lastUpdated = hotspots
@@ -1037,13 +1046,14 @@ async function init() {
     ensureHotspotLayers(map);
     setProjection(map);
     if (mapDataReady) {
-      applyFilters(map);
+      syncHotspotSource(map);
     }
   });
 
   await new Promise((resolve) => map.once("load", resolve));
 
   await loadHotspotsFromJson();
+  resetFiltersToDefaults();
   mapDataReady = true;
   ensureHotspotLayers(map);
   applyFilters(map);
