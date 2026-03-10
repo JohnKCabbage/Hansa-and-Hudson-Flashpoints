@@ -82,19 +82,28 @@ const basemapStyles = {
     },
     layers: [{ id: "esri-dark-gray-layer", type: "raster", source: "esriDarkGray" }]
   },
-  alidadeSmoothDark: {
+  esriDarkGrayLabels: {
     version: 8,
-    name: "Alidade Smooth Dark",
+    name: "Esri World Dark Gray (with labels)",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      alidadeSmoothDark: {
+      esriDarkGrayBase: {
         type: "raster",
-        tiles: ["https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png"],
+        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
         tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
+        attribution: "Tiles © Esri"
+      },
+      esriDarkGrayReference: {
+        type: "raster",
+        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        attribution: "Tiles © Esri"
       }
     },
-    layers: [{ id: "alidade-smooth-dark-layer", type: "raster", source: "alidadeSmoothDark" }]
+    layers: [
+      { id: "esri-dark-gray-base-layer", type: "raster", source: "esriDarkGrayBase" },
+      { id: "esri-dark-gray-reference-layer", type: "raster", source: "esriDarkGrayReference" }
+    ]
   }
 };
 
@@ -734,11 +743,20 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
+function hasActiveFilters() {
+  const statusActive = filterEl.value !== "all";
+  const regionActive = regionFilterEl.value !== "all";
+  const minSeverityActive = Number(minSevEl.value) > 0;
+  const searchActive = Boolean(searchInputEl?.value?.trim());
+  return statusActive || regionActive || minSeverityActive || searchActive;
+}
+
 function getActiveFeaturesForMap() {
-  if (mapDataReady) {
-    return filteredFeatures;
+  const allFeatures = fullFeatureCollection?.features ?? [];
+  if (!mapDataReady) {
+    return allFeatures;
   }
-  return fullFeatureCollection?.features ?? [];
+  return hasActiveFilters() ? filteredFeatures : allFeatures;
 }
 
 function getBasemapStyle(styleKey) {
@@ -995,9 +1013,19 @@ async function init() {
 
   map.on("error", (event) => {
     const message = String(event?.error?.message ?? "");
+    const sourceId = String(event?.sourceId ?? "");
+    const activeStyle = basemapStyles[activeBasemapKey];
+    const styleSourceIds = activeStyle && typeof activeStyle === "object" ? Object.keys(activeStyle.sources ?? {}) : [];
+    const isActiveBasemapSourceError = styleSourceIds.length
+      ? styleSourceIds.some((id) => sourceId === id || sourceId.includes(id))
+      : true;
     const basemapRequestFailure = /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP && !basemapFallbackTriggered && basemapRequestFailure;
+    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP
+      && !basemapFallbackTriggered
+      && isActiveBasemapSourceError
+      && basemapRequestFailure;
+
     if (shouldFallback) {
       basemapFallbackTriggered = true;
       console.warn("Default basemap request failed in this environment; switching to dark fallback style.", event.error);
