@@ -45,7 +45,7 @@ const basemapStyles = {
           "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
+        attribution: "Tiles © Esri"
       }
     },
     layers: [{ id: "carto-dark-layer", type: "raster", source: "cartoDark" }]
@@ -1014,7 +1014,7 @@ async function init() {
     ensureHotspotLayers(map);
     setProjection(map);
     if (mapDataReady) {
-      applyFilters(map);
+      syncHotspotSource(map);
     }
   });
 
@@ -1032,13 +1032,12 @@ init().catch((error) => {
   const message = String(error?.message ?? "");
   const likelyDatasetIssue = /hotspot|json|fetch|load/i.test(message);
 
-  if (likelyDatasetIssue) {
+  if (likelyDatasetIssue || !fullFeatureCollection?.features?.length) {
     appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
     updatedAtEl.textContent = "Dataset updated: unavailable";
     hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
     return;
   }
 
-  updatedAtEl.textContent = "Dataset updated: operational warning";
-  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Interface warning encountered. Core data may still be available; review console details.</li>";
+  console.warn("Non-fatal interface warning occurred after data load; preserving active dashboard state.", error);
 });
