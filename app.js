@@ -23,8 +23,8 @@ const HOTSPOT_SOURCE_ID = "hotspots";
 const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
 const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
-const DEFAULT_BASEMAP = "arcgis";
-const FALLBACK_BASEMAP = "osm";
+const DEFAULT_BASEMAP = "cartoDark";
+const FALLBACK_BASEMAP = "esriDarkGray";
 const HOTSPOT_DATA_CANDIDATES = [
   "./data/hotspots.json",
   "data/hotspots.json",
@@ -32,62 +32,12 @@ const HOTSPOT_DATA_CANDIDATES = [
 ];
 
 const basemapStyles = {
-  arcgis: {
-    version: 8,
-    name: "ArcGIS World Street Map",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      "esri-street": {
-        type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri"
-      }
-    },
-    layers: [{ id: "esri-street-layer", type: "raster", source: "esri-street" }]
-  },
-  osm: {
-    version: 8,
-    name: "OpenStreetMap Standard",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors"
-      }
-    },
-    layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
-  },
-  cartoVoyager: {
-    version: 8,
-    name: "Carto Voyager",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      cartoVoyager: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [{ id: "carto-voyager-layer", type: "raster", source: "cartoVoyager" }]
-  },
   cartoDark: {
     version: 8,
     name: "Carto Dark Matter",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      carto: {
+      cartoDark: {
         type: "raster",
         tiles: [
           "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
@@ -98,25 +48,71 @@ const basemapStyles = {
         attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
-    layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
+    layers: [{ id: "carto-dark-layer", type: "raster", source: "cartoDark" }]
   },
-  stamenTonerLite: {
+  cartoDarkNoLabels: {
     version: 8,
-    name: "Stamen Toner Lite",
+    name: "Carto Dark Matter (No Labels)",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      stamen: {
+      cartoDarkNoLabels: {
         type: "raster",
         tiles: [
-          "https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}.png"
+          "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
+        attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
-    layers: [{ id: "stamen-toner-lite-layer", type: "raster", source: "stamen" }]
+    layers: [{ id: "carto-dark-nolabels-layer", type: "raster", source: "cartoDarkNoLabels" }]
   },
-  libreDemo: "https://demotiles.maplibre.org/style.json"
+  esriDarkGray: {
+    version: 8,
+    name: "Esri World Dark Gray",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      esriDarkGray: {
+        type: "raster",
+        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        attribution: "Tiles © Esri"
+      }
+    },
+    layers: [{ id: "esri-dark-gray-layer", type: "raster", source: "esriDarkGray" }]
+  },
+  cartoDarkLabels: {
+    version: 8,
+    name: "Carto Dark Matter (with labels)",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      cartoDarkNoLabels: {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      },
+      cartoDarkOnlyLabels: {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png"
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      }
+    },
+    layers: [
+      { id: "carto-dark-base-layer", type: "raster", source: "cartoDarkNoLabels" },
+      { id: "carto-dark-labels-layer", type: "raster", source: "cartoDarkOnlyLabels" }
+    ]
+  }
 };
 
 const hotspotEnrichment = {
@@ -212,9 +208,10 @@ const hotspotEnrichment = {
 
 let fullFeatureCollection = null;
 let filteredFeatures = [];
+let activeMapFeatures = [];
 let mapDataReady = false;
 let activeBasemapKey = DEFAULT_BASEMAP;
-let arcgisFallbackTriggered = false;
+let basemapFallbackTriggered = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
 
@@ -755,6 +752,16 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
+function getActiveFeaturesForMap() {
+  return activeMapFeatures;
+}
+
+function syncHotspotSource(map) {
+  const source = map.getSource(HOTSPOT_SOURCE_ID);
+  if (!source) return;
+  source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
+}
+
 function getBasemapStyle(styleKey) {
   const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
   return typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
@@ -762,7 +769,7 @@ function getBasemapStyle(styleKey) {
 
 function setBasemap(map, styleKey) {
   activeBasemapKey = basemapStyles[styleKey] ? styleKey : DEFAULT_BASEMAP;
-  arcgisFallbackTriggered = false;
+  basemapFallbackTriggered = false;
   basemapEl.value = activeBasemapKey;
   map.setStyle(getBasemapStyle(activeBasemapKey));
 }
@@ -794,7 +801,7 @@ function renderHotspotList(features, map) {
 
 function ensureHotspotLayers(map) {
   if (!map.getSource(HOTSPOT_SOURCE_ID)) {
-    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: getActiveFeaturesForMap() } });
   }
 
   if (!map.getLayer(HOTSPOT_GLOW_LAYER_ID)) {
@@ -839,6 +846,8 @@ function ensureHotspotLayers(map) {
     });
   }
 
+  syncHotspotSource(map);
+
   if (!hotspotInteractionBound) {
     hotspotInteractionBound = true;
 
@@ -875,7 +884,7 @@ function ensureHotspotLayers(map) {
 }
 
 function applyFilters(map) {
-  if (!fullFeatureCollection || !map.getSource(HOTSPOT_SOURCE_ID)) {
+  if (!fullFeatureCollection) {
     return;
   }
 
@@ -893,7 +902,8 @@ function applyFilters(map) {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  map.getSource(HOTSPOT_SOURCE_ID).setData({ type: "FeatureCollection", features: filteredFeatures });
+  activeMapFeatures = filteredFeatures;
+  syncHotspotSource(map);
   renderSummary(fullFeatureCollection.features, filteredFeatures);
   renderHotspotList(filteredFeatures, map);
 }
@@ -907,6 +917,15 @@ function wireFilterHandlers(map) {
   regionFilterEl.addEventListener("change", () => applyFilters(map));
   if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
 
+}
+
+function resetFiltersToDefaults() {
+  filterEl.value = "all";
+  regionFilterEl.value = "all";
+  minSevEl.value = "0";
+  minSevValEl.textContent = "0.00";
+  if (searchInputEl) searchInputEl.value = "";
+  if (commandInputEl) commandInputEl.value = "";
 }
 
 function setProjection(map) {
@@ -968,6 +987,8 @@ async function loadHotspotsFromJson() {
   });
 
   fullFeatureCollection = { type: "FeatureCollection", features };
+  filteredFeatures = features;
+  activeMapFeatures = features;
   setRegionOptions(features);
 
   const lastUpdated = hotspots
@@ -1002,13 +1023,21 @@ async function init() {
   map.on("error", (event) => {
     const message = String(event?.error?.message ?? "");
     const sourceId = String(event?.sourceId ?? "");
-    const arcgisRequestFailure = /arcgis|esri|world_street_map|rest\/services\/world_street_map/i.test(message + sourceId)
-      && /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
+    const activeStyle = basemapStyles[activeBasemapKey];
+    const styleSourceIds = activeStyle && typeof activeStyle === "object" ? Object.keys(activeStyle.sources ?? {}) : [];
+    const isActiveBasemapSourceError = styleSourceIds.length
+      ? styleSourceIds.some((id) => sourceId === id || sourceId.includes(id))
+      : true;
+    const basemapRequestFailure = /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === "arcgis" && !arcgisFallbackTriggered && !mapDataReady && arcgisRequestFailure;
+    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP
+      && !basemapFallbackTriggered
+      && isActiveBasemapSourceError
+      && basemapRequestFailure;
+
     if (shouldFallback) {
-      arcgisFallbackTriggered = true;
-      console.warn("ArcGIS basemap request failed in this environment; falling back to OSM.", event.error);
+      basemapFallbackTriggered = true;
+      console.warn("Default basemap request failed in this environment; switching to dark fallback style.", event.error);
       setBasemap(map, FALLBACK_BASEMAP);
     }
   });
@@ -1017,13 +1046,14 @@ async function init() {
     ensureHotspotLayers(map);
     setProjection(map);
     if (mapDataReady) {
-      applyFilters(map);
+      syncHotspotSource(map);
     }
   });
 
   await new Promise((resolve) => map.once("load", resolve));
 
   await loadHotspotsFromJson();
+  resetFiltersToDefaults();
   mapDataReady = true;
   ensureHotspotLayers(map);
   applyFilters(map);

@@ -42,14 +42,19 @@ body::before {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  position: relative;
+  box-shadow: 
+    inset 0 0 0 1px rgba(40, 185, 88, 0.18), 
+    0 0 18px rgba(0, 255, 65, 0.08),
+    inset -40px 0 60px -20px rgba(0, 255, 65, 0.12);
 }
 .bootline { margin: 0 0 5px; color: var(--muted); font-size: 0.76rem; letter-spacing: .08em; }
 .titleRow { display: flex; align-items: center; gap: 10px; }
 .titleLogo {
-  width: 34px;
-  height: 34px;
+  width: 108px;
+  height: 108px;
   object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(68%) sepia(81%) saturate(620%) hue-rotate(84deg) brightness(104%) contrast(102%) drop-shadow(0 0 8px rgba(0,255,65,.45));
+  filter: brightness(0) saturate(100%) invert(68%) sepia(81%) saturate(620%) hue-rotate(84deg) brightness(104%) contrast(102%) drop-shadow(0 2px 12px rgba(0,255,65,.6)) drop-shadow(2px 4px 20px rgba(0,255,65,.35));
   opacity: .95;
   mix-blend-mode: screen;
 }
@@ -58,12 +63,17 @@ h1::before { content: "> "; }
 .sub { margin: 6px 0 0; color: var(--muted); max-width: 72ch; }
 .sub::after { content: " █"; animation: blink 1s steps(1, end) infinite; }
 
-.topbarControls { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 10px; }
+.topbarControls { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; position: relative; z-index: 1; }
 .inlineControl { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; text-transform: uppercase; }
 .inlineControl select { min-width: 180px; }
 .inlineToggle input { width: 16px; height: 16px; accent-color: var(--accent); }
 .small { margin: 2px 0 0; color: var(--muted); font-size: .8rem; }
 .small::before { content: "SYS TSTAMP: "; color: var(--ink); }
+.topbarControls .titleLogo { order: 99; margin-left: 8px; }
+/* Conflict-safe logo placement: if both legacy and new logo nodes exist after merge,
+   hide the old title-row logo and keep only the rightmost controls logo visible. */
+.titleRow .titleLogo { display: none; }
+.topbarControls .titleLogo:not(:last-of-type) { display: none; }
 
 .layout {
   display: grid;
@@ -153,8 +163,10 @@ button:hover { border-color: var(--accent); }
   .mapWrap { min-height: 62vh; }
 }
 @media (max-width: 900px) {
+
+  .titleLogo { width: 82px; height: 82px; }
   .topbar { flex-direction: column; }
-  .topbarControls { justify-content: flex-start; }
+  .topbarControls { flex-wrap: wrap; justify-content: flex-start; }
   .layout { grid-template-columns: 1fr; }
   .kv { grid-template-columns: 1fr; }
 }
