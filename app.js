@@ -91,7 +91,7 @@ const basemapStyles = {
         type: "raster",
         tiles: ["https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png"],
         tileSize: 256,
-        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
+        attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
     layers: [{ id: "alidade-smooth-dark-layer", type: "raster", source: "alidadeSmoothDark" }]
