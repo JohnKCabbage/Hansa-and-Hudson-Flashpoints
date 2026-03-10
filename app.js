@@ -24,7 +24,7 @@ const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
 const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
 const DEFAULT_BASEMAP = "cartoDark";
-const FALLBACK_BASEMAP = "esriDarkGray";
+const FALLBACK_BASEMAP = "cartoDarkNoLabels";
 const HOTSPOT_DATA_CANDIDATES = [
   "./data/hotspots.json",
   "data/hotspots.json",
@@ -45,7 +45,7 @@ const basemapStyles = {
           "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
+        attribution: "Tiles © Esri"
       }
     },
     layers: [{ id: "carto-dark-layer", type: "raster", source: "cartoDark" }]
@@ -81,38 +81,8 @@ const basemapStyles = {
       }
     },
     layers: [{ id: "esri-dark-gray-layer", type: "raster", source: "esriDarkGray" }]
-  },
-  cartoDarkLabels: {
-    version: 8,
-    name: "Carto Dark Matter (with labels)",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      cartoDarkNoLabels: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      },
-      cartoDarkOnlyLabels: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [
-      { id: "carto-dark-base-layer", type: "raster", source: "cartoDarkNoLabels" },
-      { id: "carto-dark-labels-layer", type: "raster", source: "cartoDarkOnlyLabels" }
-    ]
   }
+
 };
 
 const hotspotEnrichment = {
@@ -1025,9 +995,7 @@ async function init() {
     const sourceId = String(event?.sourceId ?? "");
     const activeStyle = basemapStyles[activeBasemapKey];
     const styleSourceIds = activeStyle && typeof activeStyle === "object" ? Object.keys(activeStyle.sources ?? {}) : [];
-    const isActiveBasemapSourceError = styleSourceIds.length
-      ? styleSourceIds.some((id) => sourceId === id || sourceId.includes(id))
-      : true;
+    const isActiveBasemapSourceError = Boolean(sourceId) && styleSourceIds.some((id) => sourceId === id || sourceId.includes(id));
     const basemapRequestFailure = /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
     const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP
