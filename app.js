@@ -29,27 +29,7 @@ const HOTSPOT_DATA_CANDIDATES = [
   "/data/hotspots.json"
 ];
 
-const CUSTOM_DARK_STYLE = {
-  version: 8,
-  name: "OpenMapTiles Terminal Dark",
-  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-  sources: {
-    openmaptiles: {
-      type: "vector",
-      url: "https://demotiles.maplibre.org/tiles/tiles.json"
-    }
-  },
-  layers: [
-    { id: "background", type: "background", paint: { "background-color": "#050b14" } },
-    { id: "water", type: "fill", source: "openmaptiles", "source-layer": "water", paint: { "fill-color": "#091a2b" } },
-    { id: "landcover", type: "fill", source: "openmaptiles", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], "forest", "#0f221d", "wood", "#12261f", "grass", "#1a2a22", "#101920"] } },
-    { id: "landuse", type: "fill", source: "openmaptiles", "source-layer": "landuse", paint: { "fill-color": ["match", ["get", "class"], "residential", "#1a1f28", "industrial", "#22222a", "park", "#13271c", "#171d26"], "fill-opacity": 0.65 } },
-    { id: "countries-fill", type: "fill", source: "openmaptiles", "source-layer": "boundary", filter: ["==", ["get", "admin_level"], 2], paint: { "fill-color": ["interpolate", ["linear"], ["mod", ["id"], 6], 0, "#1e2a3a", 1, "#2a2337", 2, "#1f3530", 3, "#332a2c", 4, "#27333d", 5, "#2f2f35"], "fill-opacity": 0.2 } },
-    { id: "borders", type: "line", source: "openmaptiles", "source-layer": "boundary", paint: { "line-color": "#21c76a", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.4, 4, 1, 8, 1.6], "line-opacity": 0.8 } },
-    { id: "transportation", type: "line", source: "openmaptiles", "source-layer": "transportation", paint: { "line-color": "#2c3948", "line-width": 0.6, "line-opacity": 0.6 } },
-    { id: "place-labels", type: "symbol", source: "openmaptiles", "source-layer": "place", layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 5, 12, 8, 14] }, paint: { "text-color": "#b8bec9", "text-halo-color": "#0c1218", "text-halo-width": 1.1 } }
-  ]
-};
+const MAPLIBRE_BASE_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 
 const FALLBACK_DARK_STYLE = {
   version: 8,
@@ -717,11 +697,73 @@ function syncHotspotSource(map) {
 }
 
 function getBasemapStyle() {
-  return JSON.parse(JSON.stringify(CUSTOM_DARK_STYLE));
+  return MAPLIBRE_BASE_STYLE_URL;
 }
 
 function getFallbackStyle() {
   return JSON.parse(JSON.stringify(FALLBACK_DARK_STYLE));
+}
+
+function applyTerminalTheme(map) {
+  const style = map.getStyle();
+  if (!style?.layers?.length) return;
+
+  const setPaint = (layerId, key, value) => {
+    if (!map.getLayer(layerId)) return;
+    try {
+      map.setPaintProperty(layerId, key, value);
+    } catch (_error) {
+      // no-op for incompatible layer property/type
+    }
+  };
+
+  for (const layer of style.layers) {
+    const layerId = layer.id;
+    const sourceLayer = String(layer["source-layer"] ?? "");
+    const layerType = layer.type;
+
+    if (layerType === "background") {
+      setPaint(layerId, "background-color", "#050b14");
+      continue;
+    }
+
+    if (sourceLayer.includes("water")) {
+      setPaint(layerId, "fill-color", "#081a2f");
+      setPaint(layerId, "line-color", "#0f2a4a");
+      continue;
+    }
+
+    if (sourceLayer.includes("landcover") || sourceLayer.includes("landuse")) {
+      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#12251f", "wood", "#153027", "park", "#183127", "residential", "#232937", "industrial", "#2a2c34", "#1a2330"]);
+      continue;
+    }
+
+    if ((sourceLayer.includes("boundary") || sourceLayer.includes("admin")) && layerType === "fill") {
+      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 0], 6], 0, "#1e2a3a", 1, "#2a2337", 2, "#1f3530", 3, "#332a2c", 4, "#27333d", 5, "#2f2f35"]);
+      setPaint(layerId, "fill-opacity", 0.3);
+      continue;
+    }
+
+    if (sourceLayer.includes("boundary") || sourceLayer.includes("admin")) {
+      setPaint(layerId, "line-color", "#1fd16a");
+      setPaint(layerId, "line-width", ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.9, 8, 1.5]);
+      setPaint(layerId, "line-opacity", 0.85);
+      continue;
+    }
+
+    if (layerType === "symbol" && (sourceLayer.includes("place") || sourceLayer.includes("label") || layerId.includes("label"))) {
+      setPaint(layerId, "text-color", "#c0c7d1");
+      setPaint(layerId, "text-halo-color", "#0b1017");
+      setPaint(layerId, "text-halo-width", 1.1);
+      setPaint(layerId, "icon-color", "#9ea8b6");
+      continue;
+    }
+
+    if (layerType === "line" && sourceLayer.includes("transport")) {
+      setPaint(layerId, "line-color", "#2a3648");
+      setPaint(layerId, "line-opacity", 0.65);
+    }
+  }
 }
 
 function renderHotspotList(features, map) {
@@ -980,18 +1022,19 @@ async function init() {
   map.on("error", (event) => {
     const message = String(event?.error?.message ?? "");
     const sourceId = String(event?.sourceId ?? "");
-    const failedPrimaryTiles = sourceId.includes("openmaptiles")
+    const failedPrimaryTiles = /(demotiles\.maplibre|openmaptiles|pbf|tiles\.json)/i.test(message + sourceId)
       && /(403|404|5\d\d|failed|fetch|tile|cors|network)/i.test(message);
 
     if (failedPrimaryTiles && !styleFallbackTriggered) {
       styleFallbackTriggered = true;
-      console.warn("Primary OpenMapTiles style failed; switching to fallback dark raster style.", event.error);
+      console.warn("Primary MapLibre base style failed; switching to fallback dark raster style.", event.error);
       map.setStyle(getFallbackStyle());
     }
   });
 
 
   map.on("style.load", () => {
+    applyTerminalTheme(map);
     setProjection(map);
     refreshHotspotVisuals(map);
   });
