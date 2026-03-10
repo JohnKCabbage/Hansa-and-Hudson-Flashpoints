@@ -23,8 +23,8 @@ const HOTSPOT_SOURCE_ID = "hotspots";
 const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
 const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
-const DEFAULT_BASEMAP = "arcgis";
-const FALLBACK_BASEMAP = "osm";
+const DEFAULT_BASEMAP = "cartoDark";
+const FALLBACK_BASEMAP = "cartoDarkNoLabels";
 const HOTSPOT_DATA_CANDIDATES = [
   "./data/hotspots.json",
   "data/hotspots.json",
@@ -32,62 +32,12 @@ const HOTSPOT_DATA_CANDIDATES = [
 ];
 
 const basemapStyles = {
-  arcgis: {
-    version: 8,
-    name: "ArcGIS World Street Map",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      "esri-street": {
-        type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri"
-      }
-    },
-    layers: [{ id: "esri-street-layer", type: "raster", source: "esri-street" }]
-  },
-  osm: {
-    version: 8,
-    name: "OpenStreetMap Standard",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors"
-      }
-    },
-    layers: [{ id: "osm-layer", type: "raster", source: "osm" }]
-  },
-  cartoVoyager: {
-    version: 8,
-    name: "Carto Voyager",
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    sources: {
-      cartoVoyager: {
-        type: "raster",
-        tiles: [
-          "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-          "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-        ],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors © CARTO"
-      }
-    },
-    layers: [{ id: "carto-voyager-layer", type: "raster", source: "cartoVoyager" }]
-  },
   cartoDark: {
     version: 8,
     name: "Carto Dark Matter",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      carto: {
+      cartoDark: {
         type: "raster",
         tiles: [
           "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
@@ -98,25 +48,26 @@ const basemapStyles = {
         attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
-    layers: [{ id: "carto-dark-layer", type: "raster", source: "carto" }]
+    layers: [{ id: "carto-dark-layer", type: "raster", source: "cartoDark" }]
   },
-  stamenTonerLite: {
+  cartoDarkNoLabels: {
     version: 8,
-    name: "Stamen Toner Lite",
+    name: "Carto Dark Matter (No Labels)",
     glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
-      stamen: {
+      cartoDarkNoLabels: {
         type: "raster",
         tiles: [
-          "https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}.png"
+          "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
+        attribution: "© OpenStreetMap contributors © CARTO"
       }
     },
-    layers: [{ id: "stamen-toner-lite-layer", type: "raster", source: "stamen" }]
-  },
-  libreDemo: "https://demotiles.maplibre.org/style.json"
+    layers: [{ id: "carto-dark-nolabels-layer", type: "raster", source: "cartoDarkNoLabels" }]
+  }
 };
 
 const hotspotEnrichment = {
@@ -214,7 +165,7 @@ let fullFeatureCollection = null;
 let filteredFeatures = [];
 let mapDataReady = false;
 let activeBasemapKey = DEFAULT_BASEMAP;
-let arcgisFallbackTriggered = false;
+let basemapFallbackTriggered = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
 
@@ -762,7 +713,7 @@ function getBasemapStyle(styleKey) {
 
 function setBasemap(map, styleKey) {
   activeBasemapKey = basemapStyles[styleKey] ? styleKey : DEFAULT_BASEMAP;
-  arcgisFallbackTriggered = false;
+  basemapFallbackTriggered = false;
   basemapEl.value = activeBasemapKey;
   map.setStyle(getBasemapStyle(activeBasemapKey));
 }
@@ -1001,14 +952,12 @@ async function init() {
 
   map.on("error", (event) => {
     const message = String(event?.error?.message ?? "");
-    const sourceId = String(event?.sourceId ?? "");
-    const arcgisRequestFailure = /arcgis|esri|world_street_map|rest\/services\/world_street_map/i.test(message + sourceId)
-      && /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
+    const basemapRequestFailure = /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === "arcgis" && !arcgisFallbackTriggered && !mapDataReady && arcgisRequestFailure;
+    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP && !basemapFallbackTriggered && !mapDataReady && basemapRequestFailure;
     if (shouldFallback) {
-      arcgisFallbackTriggered = true;
-      console.warn("ArcGIS basemap request failed in this environment; falling back to OSM.", event.error);
+      basemapFallbackTriggered = true;
+      console.warn("Default basemap request failed in this environment; switching to dark fallback style.", event.error);
       setBasemap(map, FALLBACK_BASEMAP);
     }
   });
