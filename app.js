@@ -971,13 +971,12 @@ init().catch((error) => {
   const message = String(error?.message ?? "");
   const likelyDatasetIssue = /hotspot|json|fetch|load/i.test(message);
 
-  if (likelyDatasetIssue) {
+  if (likelyDatasetIssue || !fullFeatureCollection?.features?.length) {
     appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
     updatedAtEl.textContent = "Dataset updated: unavailable";
     hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
     return;
   }
 
-  updatedAtEl.textContent = "Dataset updated: operational warning";
-  hotspotListEl.innerHTML = "<li class='hotspotMeta'>Interface warning encountered. Core data may still be available; review console details.</li>";
+  console.warn("Non-fatal interface warning occurred after data load; preserving active dashboard state.", error);
 });
