@@ -24,7 +24,7 @@ const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
 const HOTSPOT_LAYER_ID = "hotspots-layer";
 const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
 const DEFAULT_BASEMAP = "cartoDark";
-const FALLBACK_BASEMAP = "cartoDarkNoLabels";
+const FALLBACK_BASEMAP = "esriDarkGray";
 const HOTSPOT_DATA_CANDIDATES = [
   "./data/hotspots.json",
   "data/hotspots.json",
@@ -67,6 +67,34 @@ const basemapStyles = {
       }
     },
     layers: [{ id: "carto-dark-nolabels-layer", type: "raster", source: "cartoDarkNoLabels" }]
+  },
+  esriDarkGray: {
+    version: 8,
+    name: "Esri World Dark Gray",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      esriDarkGray: {
+        type: "raster",
+        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        attribution: "Tiles © Esri"
+      }
+    },
+    layers: [{ id: "esri-dark-gray-layer", type: "raster", source: "esriDarkGray" }]
+  },
+  alidadeSmoothDark: {
+    version: 8,
+    name: "Alidade Smooth Dark",
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      alidadeSmoothDark: {
+        type: "raster",
+        tiles: ["https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      }
+    },
+    layers: [{ id: "alidade-smooth-dark-layer", type: "raster", source: "alidadeSmoothDark" }]
   }
 };
 
@@ -706,6 +734,13 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
+function getActiveFeaturesForMap() {
+  if (mapDataReady) {
+    return filteredFeatures;
+  }
+  return fullFeatureCollection?.features ?? [];
+}
+
 function getBasemapStyle(styleKey) {
   const style = basemapStyles[styleKey] ?? basemapStyles[DEFAULT_BASEMAP];
   return typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
@@ -745,7 +780,7 @@ function renderHotspotList(features, map) {
 
 function ensureHotspotLayers(map) {
   if (!map.getSource(HOTSPOT_SOURCE_ID)) {
-    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: getActiveFeaturesForMap() } });
   }
 
   if (!map.getLayer(HOTSPOT_GLOW_LAYER_ID)) {
@@ -790,6 +825,11 @@ function ensureHotspotLayers(map) {
     });
   }
 
+  const source = map.getSource(HOTSPOT_SOURCE_ID);
+  if (source) {
+    source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
+  }
+
   if (!hotspotInteractionBound) {
     hotspotInteractionBound = true;
 
@@ -826,7 +866,7 @@ function ensureHotspotLayers(map) {
 }
 
 function applyFilters(map) {
-  if (!fullFeatureCollection || !map.getSource(HOTSPOT_SOURCE_ID)) {
+  if (!fullFeatureCollection) {
     return;
   }
 
@@ -844,7 +884,10 @@ function applyFilters(map) {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  map.getSource(HOTSPOT_SOURCE_ID).setData({ type: "FeatureCollection", features: filteredFeatures });
+  const hotspotSource = map.getSource(HOTSPOT_SOURCE_ID);
+  if (hotspotSource) {
+    hotspotSource.setData({ type: "FeatureCollection", features: filteredFeatures });
+  }
   renderSummary(fullFeatureCollection.features, filteredFeatures);
   renderHotspotList(filteredFeatures, map);
 }
@@ -954,7 +997,7 @@ async function init() {
     const message = String(event?.error?.message ?? "");
     const basemapRequestFailure = /(403|404|5\d\d|failed|fetch|tile)/i.test(message);
 
-    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP && !basemapFallbackTriggered && !mapDataReady && basemapRequestFailure;
+    const shouldFallback = activeBasemapKey === DEFAULT_BASEMAP && !basemapFallbackTriggered && basemapRequestFailure;
     if (shouldFallback) {
       basemapFallbackTriggered = true;
       console.warn("Default basemap request failed in this environment; switching to dark fallback style.", event.error);
