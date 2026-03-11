@@ -118,7 +118,8 @@ button:hover { border-color: var(--accent); }
 .pulseDot::before { content: "● "; color: var(--accent); animation: blink .9s steps(1, end) infinite; }
 .grad { height: 16px; border: 1px solid rgba(157,255,178,.3); background: linear-gradient(90deg, #009655 0%, #ffce00 50%, #cc0022 100%); }
 .legendLabels { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: .76rem; text-transform: uppercase; }
-#map { width: 100%; height: 100%; filter: saturate(.85) hue-rotate(-20deg) contrast(1.08); }
+#map { width: 100%; height: 100%; position: relative; filter: saturate(.68) hue-rotate(-18deg) contrast(.95) brightness(.7); }
+#map::after { content: ""; position: absolute; inset: 0; background: rgba(2, 8, 12, .34); pointer-events: none; z-index: 1; }
 
 .hotspotList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .hotspotBtn { width: 100%; text-align: left; border: 1px solid var(--line); background: rgba(0,255,65,.04); padding: 8px; color: var(--ink); font-family: inherit; }
@@ -138,7 +139,7 @@ button:hover { border-color: var(--accent); }
 .close { margin-left: auto; display: block; width: 34px; height: 34px; font-size: 1.3rem; color: var(--accent); background: #07180d; border: 1px solid var(--line); }
 .hidden { display: none; }
 
-.cardHero img { width: 100%; max-height: 220px; object-fit: cover; border: 1px solid var(--line); margin: 4px 0 10px; }
+.cardHero img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border: 1px solid var(--line); background: #020705; margin: 4px 0 10px; }
 .cardTitle { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cardTitle h2 { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .badge { border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; font-size: .74rem; }

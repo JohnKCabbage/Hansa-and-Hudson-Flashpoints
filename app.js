@@ -138,6 +138,10 @@ const hotspotEnrichment = {
   transnistria: {
     flag: "🇲🇩",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Tiraspol_montage.jpg/1280px-Tiraspol_montage.jpg"
+  },
+  iran_israel_shadow: {
+    flag: "🇮🇷 🇮🇱 🇺🇸",
+    image: "assets/Pictures/IranConflict.png"
   }
 };
 
@@ -281,13 +285,20 @@ const FLAG_ICON_LABELS = {
   EH: "Western Sahara"
 };
 
+const FLAG_ICON_SOURCE_OVERRIDES = {
+  IR: "assets/flags/Flag_of_Iran.svg.png",
+  IL: "assets/flags/Flag_of_Israel.svg",
+  US: "assets/flags/Flag_of_the_United_States_(DDD-F-416E_specifications).svg.png",
+  RU: "assets/flags/Russia.png"
+};
+
 function getFlagAsset(code) {
   const normalizedCode = String(code ?? "").toUpperCase();
   if (!normalizedCode) return null;
   return {
     code: normalizedCode,
     label: FLAG_ICON_LABELS[normalizedCode] ?? normalizedCode,
-    src: `assets/flags/${normalizedCode.toLowerCase()}.png`,
+    src: FLAG_ICON_SOURCE_OVERRIDES[normalizedCode] ?? `assets/flags/${normalizedCode.toLowerCase()}.png`,
     fallbackSrc: FLAG_PLACEHOLDER_SRC
   };
 }
@@ -322,7 +333,7 @@ function inferFlagCodesFromHotspot(hotspot) {
     ecuador_security: ["EC"],
     mexico_cartel: ["MX"],
     red_sea: ["YE", "UN"],
-    iran_israel_shadow: ["IR", "IL"],
+    iran_israel_shadow: ["IR", "IL", "US"],
     iraq_syria_isis: ["IQ", "SY"],
     lebanon_border: ["LB", "IL"],
     libya: ["LY"],
