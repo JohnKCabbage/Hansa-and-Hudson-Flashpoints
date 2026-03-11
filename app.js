@@ -728,24 +728,24 @@ function applyTerminalTheme(map) {
     }
 
     if (sourceLayer.includes("water")) {
-      setPaint(layerId, "fill-color", "#081a2f");
-      setPaint(layerId, "line-color", "#0f2a4a");
+      setPaint(layerId, "fill-color", "#10304f");
+      setPaint(layerId, "line-color", "#1b3f65");
       continue;
     }
 
     if (sourceLayer.includes("landcover") || sourceLayer.includes("landuse")) {
-      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#12251f", "wood", "#153027", "park", "#183127", "residential", "#232937", "industrial", "#2a2c34", "#1a2330"]);
+      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#1a2a26", "wood", "#1d302b", "park", "#203329", "residential", "#2a303b", "industrial", "#31333a", "#242c36"]);
       continue;
     }
 
     if ((sourceLayer.includes("boundary") || sourceLayer.includes("admin")) && layerType === "fill") {
-      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 0], 6], 0, "#1e2a3a", 1, "#2a2337", 2, "#1f3530", 3, "#332a2c", 4, "#27333d", 5, "#2f2f35"]);
-      setPaint(layerId, "fill-opacity", 0.3);
+      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 6], 6], 0, "#2a3440", 1, "#32303c", 2, "#2a3a35", 3, "#3a3235", 4, "#2e3842", 5, "#35353b" ]);
+      setPaint(layerId, "fill-opacity", 0.22);
       continue;
     }
 
     if (sourceLayer.includes("boundary") || sourceLayer.includes("admin")) {
-      setPaint(layerId, "line-color", "#1fd16a");
+      setPaint(layerId, "line-color", "#1ecf67");
       setPaint(layerId, "line-width", ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.9, 8, 1.5]);
       setPaint(layerId, "line-opacity", 0.85);
       continue;
