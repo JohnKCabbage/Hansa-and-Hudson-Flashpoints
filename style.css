@@ -1,13 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 :root {
-  --bg: #020502;
-  --panel: #06110a;
-  --panel-2: #07160d;
-  --ink: #9dffb2;
-  --muted: #49bf69;
-  --line: #1f6638;
-  --accent: #00ff41;
+  --bg: #0b1622;
+  --panel: #101f2d;
+  --panel-2: #132636;
+  --ink: #c7d6cc;
+  --muted: #8fa999;
+  --line: #3d5d53;
+  --accent: #7cbf90;
 }
 
 * { box-sizing: border-box; }
@@ -16,19 +16,10 @@ body {
   margin: 0;
   font-family: "Share Tech Mono", ui-monospace, monospace;
   color: var(--ink);
-  background: radial-gradient(circle at 50% 10%, #07200f 0, var(--bg) 45%, #010301 100%);
-  text-shadow: 0 0 6px rgba(0, 255, 65, 0.25);
+  background: radial-gradient(circle at 50% 10%, #1a2c3f 0, var(--bg) 48%, #0b1622 100%);
+  text-shadow: none;
   overflow: hidden;
 }
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, rgba(0, 255, 65, 0.06), rgba(0, 255, 65, 0.06) 1px, transparent 1px, transparent 3px);
-  pointer-events: none;
-  z-index: 999;
-}
-
 .panel {
   background: linear-gradient(180deg, rgba(5, 16, 9, 0.96), rgba(2, 10, 5, 0.92));
   border: 1px solid var(--line);
@@ -118,8 +109,10 @@ button:hover { border-color: var(--accent); }
 .pulseDot::before { content: "● "; color: var(--accent); animation: blink .9s steps(1, end) infinite; }
 .grad { height: 16px; border: 1px solid rgba(157,255,178,.3); background: linear-gradient(90deg, #009655 0%, #ffce00 50%, #cc0022 100%); }
 .legendLabels { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: .76rem; text-transform: uppercase; }
-#map { width: 100%; height: 100%; position: relative; filter: saturate(.68) hue-rotate(-18deg) contrast(.95) brightness(.7); }
-#map::after { content: ""; position: absolute; inset: 0; background: rgba(2, 8, 12, .34); pointer-events: none; z-index: 1; }
+#map { width: 100%; height: 100%; position: relative; }
+#map .cesium-widget,
+#map .cesium-widget canvas { width: 100% !important; height: 100% !important; }
+.cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer, .cesium-viewer-bottom { display:none !important; }
 
 .hotspotList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .hotspotBtn { width: 100%; text-align: left; border: 1px solid var(--line); background: rgba(0,255,65,.04); padding: 8px; color: var(--ink); font-family: inherit; }

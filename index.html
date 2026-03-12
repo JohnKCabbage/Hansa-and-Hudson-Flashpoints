@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Global Flashpoints Intelligence Atlas</title>
   <meta name="description" content="Interactive monitor of global conflict flashpoints from JSON data." />
-  <link href="https://unpkg.com/maplibre-gl@5.2.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.125/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -21,7 +21,7 @@
     <div class="topbarControls">
       <img class="titleLogo" src="assets/design/H&HWatermark.png" alt="H and H emblem" onerror="this.style.display='none'" />
       <label class="inlineControl inlineToggle" for="projectionToggle">
-        Globe
+3D Globe
         <input id="projectionToggle" type="checkbox" checked />
       </label>
       <p class="small" id="updatedAt">Dataset updated: —</p>
@@ -97,7 +97,7 @@
     <div id="modalContent"></div>
   </section>
 
-  <script src="https://unpkg.com/maplibre-gl@5.2.0/dist/maplibre-gl.js"></script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.125/Build/Cesium/Cesium.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

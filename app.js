@@ -2,14 +2,12 @@ const filterEl = document.getElementById("filter");
 const regionFilterEl = document.getElementById("regionFilter");
 const minSevEl = document.getElementById("minSev");
 const minSevValEl = document.getElementById("minSevVal");
-const searchInputEl = document.getElementById("searchInput") ?? document.getElementById("commandInput");
+const searchInputEl = document.getElementById("commandInput");
 const summaryGridEl = document.getElementById("summaryGrid");
 const hotspotListEl = document.getElementById("hotspotList");
 const updatedAtEl = document.getElementById("updatedAt");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const projectionEl = document.getElementById("projectionToggle");
-const commandInputEl = document.getElementById("commandInput");
-const terminalLogEl = document.getElementById("terminalLog");
 
 const modal = document.getElementById("modal");
 const modalBackdrop = document.getElementById("modalBackdrop");
@@ -18,191 +16,23 @@ document.getElementById("closeModal").addEventListener("click", closeModal);
 modalBackdrop.addEventListener("click", closeModal);
 
 const statusBoost = { stable_threat: 0.05, frozen: 0.15, elevated: 0.25, active: 0.4 };
-
-const HOTSPOT_SOURCE_ID = "hotspots";
-const HOTSPOT_GLOW_LAYER_ID = "hotspots-glow";
-const HOTSPOT_LAYER_ID = "hotspots-layer";
-const HOTSPOT_HIT_LAYER_ID = "hotspots-hit";
-const HOTSPOT_DATA_CANDIDATES = [
-  "./data/hotspots.json",
-  "data/hotspots.json",
-  "/data/hotspots.json"
-];
-
-const MAPLIBRE_BASE_STYLE_URL = "https://demotiles.maplibre.org/style.json";
-
-const FALLBACK_DARK_STYLE = {
-  version: 8,
-  name: "Fallback Dark Raster",
-  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-  sources: {
-    cartoDarkFallback: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-      ],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors © CARTO"
-    }
-  },
-  layers: [{ id: "carto-dark-fallback-layer", type: "raster", source: "cartoDarkFallback" }]
-};
-
-const hotspotEnrichment = {
-  ukraine_russia: {
-    flag: "🇺🇦 🇷🇺",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bakhmut_shelling_2022.jpg/1280px-Bakhmut_shelling_2022.jpg"
-  },
-  gaza_israel: {
-    flag: "🇵🇸 🇮🇱",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Gaza_City_skyline.jpg/1280px-Gaza_City_skyline.jpg"
-  },
-  taiwan_strait: {
-    flag: "🇹🇼 🇨🇳",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Taipei_101_from_Xiangshan_2013.jpg/1280px-Taipei_101_from_Xiangshan_2013.jpg"
-  },
-  kashmir_india_pakistan: {
-    flag: "🇮🇳 🇵🇰",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Srinagar_Leh_highway.jpg/1280px-Srinagar_Leh_highway.jpg"
-  },
-  south_china_sea: {
-    flag: "🇨🇳 🇵🇭 🇻🇳 🇲🇾",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/South_China_Sea_map.png/1280px-South_China_Sea_map.png"
-  },
-  korean_peninsula: {
-    flag: "🇰🇷 🇰🇵",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Panmunjeom_DMZ.jpg/1280px-Panmunjeom_DMZ.jpg"
-  },
-  yemen_red_sea: {
-    flag: "🇾🇪",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sana%27a_City%2C_Yemen.jpg/1280px-Sana%27a_City%2C_Yemen.jpg"
-  },
-  sudan: {
-    flag: "🇸🇩",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Khartoum-skyline.jpg/1280px-Khartoum-skyline.jpg"
-  },
-  myanmar: {
-    flag: "🇲🇲",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Yangon_downtown.jpg/1280px-Yangon_downtown.jpg"
-  },
-  drc_east: {
-    flag: "🇨🇩",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Goma_cityscape.jpg/1280px-Goma_cityscape.jpg"
-  },
-  haiti: {
-    flag: "🇭🇹",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Port-au-Prince.jpg/1280px-Port-au-Prince.jpg"
-  },
-  ethiopia_tigray_aftershock: {
-    flag: "🇪🇹",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Addis_Ababa_montage.png/1280px-Addis_Ababa_montage.png"
-  },
-  sahel_central: {
-    flag: "🇲🇱 🇳🇪 🇧🇫",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Niamey%2C_Niger.jpg/1280px-Niamey%2C_Niger.jpg"
-  },
-  somalia: {
-    flag: "🇸🇴",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Mogadishu_Skyline.jpg/1280px-Mogadishu_Skyline.jpg"
-  },
-  lebanon_border: {
-    flag: "🇱🇧 🇮🇱",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Blue_Line_Lebanon.jpg/1280px-Blue_Line_Lebanon.jpg"
-  },
-  libya: {
-    flag: "🇱🇾",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Tripoli_skyline_2016.jpg/1280px-Tripoli_skyline_2016.jpg"
-  },
-  western_sahara: {
-    flag: "🇪🇭 🇲🇦",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Laayoune_city.jpg/1280px-Laayoune_city.jpg"
-  },
-  cyprus: {
-    flag: "🇨🇾",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Nicosia_old_city.jpg/1280px-Nicosia_old_city.jpg"
-  },
-  kosovo_serbia: {
-    flag: "🇽🇰 🇷🇸",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Mitrovica_bridge.jpg/1280px-Mitrovica_bridge.jpg"
-  },
-  armenia_azerbaijan: {
-    flag: "🇦🇲 🇦🇿",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/South_Caucasus_mountains.jpg/1280px-South_Caucasus_mountains.jpg"
-  },
-  georgia_abkhazia_ossetia: {
-    flag: "🇬🇪",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Tbilisi_montage.png/1280px-Tbilisi_montage.png"
-  },
-  transnistria: {
-    flag: "🇲🇩",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Tiraspol_montage.jpg/1280px-Tiraspol_montage.jpg"
-  },
-  iran_israel_shadow: {
-    flag: "🇮🇷 🇮🇱 🇺🇸",
-    image: "assets/Pictures/IranConflict.png"
-  }
-};
+const HOTSPOT_DATA_CANDIDATES = ["./data/hotspots.json", "data/hotspots.json", "/data/hotspots.json"];
+const COUNTRY_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
 
 let fullFeatureCollection = null;
 let filteredFeatures = [];
-let activeMapFeatures = [];
-let mapDataReady = false;
-let hoverPopup = null;
-let hotspotInteractionBound = false;
-let styleFallbackTriggered = false;
-
-function logTerminal(message) {
-  if (!terminalLogEl) return;
-  const line = document.createElement("p");
-  line.innerHTML = `<span style="color:#00ff41">&gt;</span> ${escapeHtml(message)}`;
-  terminalLogEl.prepend(line);
-  while (terminalLogEl.children.length > 10) {
-    terminalLogEl.lastElementChild?.remove();
-  }
-}
-
-function runCommand(map) {
-  if (!commandInputEl) return;
-  const raw = commandInputEl.value.trim();
-  if (!raw) return;
-  const cmd = raw.toLowerCase();
-
-  if (cmd === "clear") {
-    if (terminalLogEl) terminalLogEl.innerHTML = "";
-    logTerminal("terminal buffer cleared");
-  } else if (cmd.startsWith("scan ")) {
-    searchInputEl.value = raw.slice(5);
-    applyFilters(map);
-    logTerminal(`scan complete for ${searchInputEl.value}`);
-  } else if (cmd.startsWith("filter status ")) {
-    const status = cmd.replace("filter status ", "").trim();
-    if (["all", "active", "elevated", "frozen", "stable_threat"].includes(status)) {
-      filterEl.value = status;
-      applyFilters(map);
-      logTerminal(`status filter set to ${status}`);
-    } else {
-      logTerminal("invalid status filter");
-    }
-  } else if (cmd.startsWith("filter region ")) {
-    const region = raw.replace(/filter region\s+/i, "").trim();
-    const option = [...regionFilterEl.options].find((o) => o.value.toLowerCase() === region.toLowerCase());
-    if (option) {
-      regionFilterEl.value = option.value;
-      applyFilters(map);
-      logTerminal(`region filter set to ${option.value}`);
-    } else {
-      logTerminal("region not found");
-    }
-  } else {
-    logTerminal("unknown command :: try scan <term> | filter status <value> | filter region <value> | clear");
-  }
-
-  commandInputEl.value = "";
-}
+let hotspotEntities = [];
+let viewer;
 
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function computeSeverity(h) {
   const likelihood = clamp(h.likelihood ?? 0.4, 0, 1);
@@ -213,23 +43,9 @@ function computeSeverity(h) {
 
 function severityToColor(score) {
   const s = clamp(score, 0, 1);
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const toHex = (v) => v.toString(16).padStart(2, "0");
-  let r;
-  let g;
-  let b;
-  if (s <= 0.5) {
-    const t = s / 0.5;
-    r = Math.round(lerp(58, 236, t));
-    g = Math.round(lerp(126, 207, t));
-    b = Math.round(lerp(98, 87, t));
-  } else {
-    const t = (s - 0.5) / 0.5;
-    r = Math.round(lerp(236, 250, t));
-    g = Math.round(lerp(207, 109, t));
-    b = Math.round(lerp(87, 78, t));
-  }
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  if (s <= 0.33) return "#5f7f72";
+  if (s <= 0.66) return "#8f8871";
+  return "#a16f6f";
 }
 
 function badgeLabel(status) {
@@ -241,143 +57,20 @@ function badgeLabel(status) {
   }[status] ?? status;
 }
 
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function normalizeSources(value) {
-  if (Array.isArray(value)) return value;
-  if (typeof value === "string") {
-    if (!value.trim()) return [];
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {}
-    return value.split(/\s*[•,;]\s*/).filter(Boolean);
-  }
-  return [];
-}
-
-function normalizeStructuredList(value) {
-  if (Array.isArray(value)) return value;
-  if (typeof value !== "string") return [];
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-  try {
-    const parsed = JSON.parse(trimmed);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-const FLAG_PLACEHOLDER_SRC = "assets/flags/_placeholder.svg";
-
-const FLAG_ICON_LABELS = {
-  UN: "United Nations",
-  EU: "European Union",
-  XK: "Kosovo",
-  EH: "Western Sahara"
-};
-
-const FLAG_ICON_SOURCE_OVERRIDES = {
-  IR: "assets/flags/Flag_of_Iran.svg.png",
-  IL: "assets/flags/Flag_of_Israel.svg",
-  US: "assets/flags/Flag_of_the_United_States_(DDD-F-416E_specifications).svg.png",
-  RU: "assets/flags/Russia.png"
-};
-
-function getFlagAsset(code) {
-  const normalizedCode = String(code ?? "").toUpperCase();
-  if (!normalizedCode) return null;
-  return {
-    code: normalizedCode,
-    label: FLAG_ICON_LABELS[normalizedCode] ?? normalizedCode,
-    src: FLAG_ICON_SOURCE_OVERRIDES[normalizedCode] ?? `assets/flags/${normalizedCode.toLowerCase()}.png`,
-    fallbackSrc: FLAG_PLACEHOLDER_SRC
-  };
-}
-
-function inferFlagCodesFromHotspot(hotspot) {
-  const mapById = {
-    ukraine: ["UA", "RU"],
-    israel_palestine: ["PS", "IL"],
-    sudan: ["SD"],
-    myanmar: ["MM"],
-    dr_congo: ["CD"],
-    sahel: ["ML", "NE", "BF"],
-    somalia: ["SO"],
-    yemen: ["YE"],
-    syria: ["SY"],
-    haiti: ["HT"],
-    ethiopia_amahara: ["ET"],
-    south_sudan: ["SS"],
-    nigeria: ["NG"],
-    mozambique_cabo: ["MZ"],
-    cameroon_anglophone: ["CM"],
-    kashmir: ["IN", "PK"],
-    taiwan_strait: ["TW", "CN"],
-    south_china_sea: ["CN", "PH", "VN", "MY"],
-    korean_peninsula: ["KR", "KP"],
-    afghanistan: ["AF"],
-    pakistan_ttp: ["PK"],
-    philippines_mindanao: ["PH"],
-    thailand_south: ["TH"],
-    venezuela_guyana: ["VE", "GY"],
-    colombia_armed_groups: ["CO"],
-    ecuador_security: ["EC"],
-    mexico_cartel: ["MX"],
-    red_sea: ["YE", "UN"],
-    iran_israel_shadow: ["IR", "IL", "US"],
-    iraq_syria_isis: ["IQ", "SY"],
-    lebanon_border: ["LB", "IL"],
-    libya: ["LY"],
-    western_sahara: ["EH", "MA"],
-    cyprus: ["CY"],
-    kosovo_serbia: ["XK", "RS"],
-    bosnia_politics: ["BA"],
-    armenia_azerbaijan: ["AM", "AZ"],
-    georgia_abkhazia_ossetia: ["GE"],
-    transnistria: ["MD"],
-    sahrawi_mali_niger: ["EH", "ML", "NE"],
-    lake_chad: ["NG", "NE", "TD", "CM"],
-    peru_internal: ["PE"],
-    south_caucasus_transport: ["AM", "AZ", "GE"]
-  };
-
-  return mapById[hotspot.id] ?? ["UN"];
-}
-
-function renderFlagsMarkup(value) {
-  const codes = normalizeStructuredList(value);
-  const assets = codes.map(getFlagAsset).filter(Boolean);
-  if (!assets.length) return "";
-  return `<span class="flagSet">${assets.map((asset) => `<img class="flagIcon" src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.label)} flag" title="${escapeHtml(asset.label)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${escapeHtml(asset.fallbackSrc)}';this.classList.add('flagIconPlaceholder');" />`).join("")}</span>`;
-}
-
 function buildAnalysis(properties) {
   const statusText = badgeLabel(properties.status).toLowerCase();
-  const severity = Number(properties.severity);
-  const severityBand = severity > 0.8
-    ? "The flashpoint is in the highest risk band, where localized shocks can cascade into cross-border escalation within short timelines."
-    : severity > 0.6
-      ? "The flashpoint is in a high-risk band where tactical events can outpace formal diplomacy and crisis-management channels."
-      : "The flashpoint remains relatively contained, but unresolved structural drivers still require active monitoring and preventive diplomacy.";
+  return `${properties.summary} Current indicators classify this flashpoint as ${statusText}. Likelihood ${Number(properties.likelihood).toFixed(2)}, impact ${Number(properties.impact).toFixed(2)}.`;
+}
 
-  const regionalContext = {
-    Europe: "Regional security architecture and alliance signaling materially shape escalation pathways.",
-    "Middle East": "Proxy networks and deterrence signaling create rapid second-order escalation risks.",
-    Africa: "Governance fragmentation, displacement patterns, and cross-border armed mobility remain key multipliers.",
-    "Asia-Pacific": "Maritime/airspace encounters and force-posture signaling are central to near-term risk swings.",
-    Americas: "State-capacity stress and armed-group adaptation influence durability and spillover risk."
-  }[properties.region] ?? "Geopolitical competition, governance conditions, and coercive signaling remain core risk drivers.";
-
-  return `${properties.summary} Current indicators classify this as ${statusText} with likelihood ${Number(properties.likelihood).toFixed(2)} and impact ${Number(properties.impact).toFixed(2)}. ${severityBand} ${regionalContext}`;
+function setRegionOptions(features) {
+  regionFilterEl.innerHTML = '<option value="all">All regions</option>';
+  const regions = [...new Set(features.map((f) => f.properties.region).filter(Boolean))].sort();
+  for (const region of regions) {
+    const option = document.createElement("option");
+    option.value = region;
+    option.textContent = region;
+    regionFilterEl.appendChild(option);
+  }
 }
 
 function renderSummary(features, filtered) {
@@ -401,252 +94,11 @@ function renderSummary(features, filtered) {
   `;
 }
 
-function setRegionOptions(features) {
-  regionFilterEl.innerHTML = '<option value="all">All regions</option>';
-  const regions = [...new Set(features.map((f) => f.properties.region).filter(Boolean))].sort();
-  for (const region of regions) {
-    const option = document.createElement("option");
-    option.value = region;
-    option.textContent = region;
-    regionFilterEl.appendChild(option);
-  }
-}
-
-
-
-const NON_PAYWALLED_NEWS_SOURCES = [
-  "BBC",
-  "CNN",
-  "Reuters",
-  "Associated Press",
-  "NPR",
-  "Al Jazeera",
-  "The Guardian",
-  "CBS News",
-  "ABC News",
-  "Sky News"
-];
-
-const HEADLINE_LOOKBACK_DAYS = 31;
-
-const NON_PAYWALLED_SOURCE_DOMAINS = {
-  "bbc.com": "BBC",
-  "cnn.com": "CNN",
-  "reuters.com": "Reuters",
-  "apnews.com": "Associated Press",
-  "npr.org": "NPR",
-  "aljazeera.com": "Al Jazeera",
-  "theguardian.com": "The Guardian",
-  "cbsnews.com": "CBS News",
-  "abcnews.go.com": "ABC News",
-  "news.sky.com": "Sky News"
-};
-
-function buildHeadlineQuery(properties) {
-  const name = String(properties.name ?? "").replace(/[–—]/g, " ").trim();
-  const region = String(properties.region ?? "").trim();
-  const category = String(properties.category ?? "").trim();
-  return [name, region, category].filter(Boolean).join(" ");
-}
-
-function buildTrustedHeadlineFilterRegex() {
-  const escaped = NON_PAYWALLED_NEWS_SOURCES
-    .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
-  return new RegExp(`(${escaped.join("|")})`, "i");
-}
-
-function parseHostFromUrl(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-function inferSourceFromDomain(link) {
-  const host = parseHostFromUrl(link);
-  if (!host) return "";
-
-  const match = Object.entries(NON_PAYWALLED_SOURCE_DOMAINS)
-    .find(([domain]) => host === domain || host.endsWith(`.${domain}`));
-  return match?.[1] ?? "";
-}
-
-function parseGdeltDate(value) {
-  const raw = String(value ?? "").trim();
-  if (!/^\d{14}$/.test(raw)) return "";
-  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}T${raw.slice(8, 10)}:${raw.slice(10, 12)}:${raw.slice(12, 14)}Z`;
-}
-
-function buildEventKeywordRegex(properties) {
-  const rawTokens = [properties.name, properties.region, properties.category]
-    .flatMap((value) => String(value ?? "").toLowerCase().split(/[^a-z0-9]+/i))
-    .filter((token) => token.length > 2);
-  const uniqueTokens = [...new Set(rawTokens)];
-  if (!uniqueTokens.length) return null;
-
-  const escaped = uniqueTokens
-    .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  return new RegExp(`\\b(${escaped.join("|")})\\b`, "i");
-}
-
-function isWithinLastMonth(pubDate) {
-  const published = Date.parse(pubDate);
-  if (!Number.isFinite(published)) return false;
-
-  const lookbackMs = HEADLINE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
-  return Date.now() - published <= lookbackMs;
-}
-
-function normalizeHeadlineItems(rawItems, properties) {
-  const trustedRegex = buildTrustedHeadlineFilterRegex();
-  const eventKeywordRegex = buildEventKeywordRegex(properties);
-
-  return rawItems
-    .map((item) => ({
-      title: String(item.title ?? "").trim(),
-      link: String(item.link ?? "").trim(),
-      pubDate: String(item.pubDate ?? item.isoDate ?? "").trim(),
-      source: String(item.source ?? "").trim()
-    }))
-    .filter((item) => item.title && item.link)
-    .map((item) => {
-      const sourceFromTitle = item.title.includes(" - ") ? item.title.split(" - ").at(-1).trim() : "";
-      const sourceFromDomain = inferSourceFromDomain(item.link);
-      return { ...item, source: item.source || sourceFromDomain || sourceFromTitle || "News" };
-    })
-    .filter((item) => trustedRegex.test(item.source) || trustedRegex.test(item.title))
-    .filter((item) => isWithinLastMonth(item.pubDate))
-    .filter((item) => !eventKeywordRegex || eventKeywordRegex.test(item.title));
-}
-
-function parseRssItemsFromText(rssText) {
-  const xml = new DOMParser().parseFromString(rssText, "text/xml");
-  const parseError = xml.querySelector("parsererror");
-  if (parseError) throw new Error("Unable to parse RSS response");
-
-  return [...xml.querySelectorAll("item")].map((item) => ({
-    title: item.querySelector("title")?.textContent ?? "",
-    link: item.querySelector("link")?.textContent ?? "",
-    pubDate: item.querySelector("pubDate")?.textContent ?? "",
-    source: item.querySelector("source")?.textContent ?? ""
-  }));
-}
-
-async function fetchHeadlinesWithFallback(query, properties) {
-  const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:${HEADLINE_LOOKBACK_DAYS}d`)}&hl=en-US&gl=US&ceid=US:en`;
-  const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
-  const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=75&sort=DateDesc`;
-
-  const providers = [
-    {
-      name: "gdelt",
-      url: gdeltUrl,
-      parse: async (response) => {
-        const payload = await response.json();
-        return (payload.articles ?? []).map((item) => ({
-          title: item.title,
-          link: item.url,
-          pubDate: parseGdeltDate(item.seendate),
-          source: item.domain
-        }));
-      }
-    },
-    {
-      name: "rss2json-google",
-      url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleFeedUrl)}`,
-      parse: async (response) => {
-        const payload = await response.json();
-        if (payload.status !== "ok") throw new Error("rss2json returned non-ok status");
-        return (payload.items ?? []).map((item) => ({
-          title: item.title,
-          link: item.link,
-          pubDate: item.pubDate,
-          source: item.author || item.source || ""
-        }));
-      }
-    },
-    {
-      name: "allorigins-google",
-      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(googleFeedUrl)}`,
-      parse: async (response) => parseRssItemsFromText(await response.text())
-    },
-    {
-      name: "jina-google",
-      url: `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
-      parse: async (response) => parseRssItemsFromText(await response.text())
-    },
-    {
-      name: "allorigins-bing",
-      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(bingFeedUrl)}`,
-      parse: async (response) => parseRssItemsFromText(await response.text())
-    }
-  ];
-
-  const failures = [];
-  for (const provider of providers) {
-    try {
-      const response = await fetch(provider.url, { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const items = await provider.parse(response);
-      const trustedItems = normalizeHeadlineItems(items, properties).slice(0, 18);
-      if (trustedItems.length) {
-        return { items: trustedItems, provider: provider.name };
-      }
-      failures.push(`${provider.name}: no trusted items`);
-    } catch (error) {
-      failures.push(`${provider.name}: ${error.message}`);
-    }
-  }
-
-  console.warn("Headline providers exhausted:", failures.join(" | "));
-  return { items: [], provider: "none" };
-}
-
-function renderHeadlines(items, query) {
-  const rail = document.getElementById("headlineRail");
-  if (!rail) return;
-
-  if (!items.length) {
-    rail.innerHTML = `<div class="headlineFallback">No recent trusted headlines found for this hotspot right now. <a href="https://news.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener noreferrer">Open live search</a>.</div>`;
-    return;
-  }
-
-  rail.innerHTML = items.map((item) => `
-    <article class="headlineCard">
-      <div class="headlineSource">${escapeHtml(item.source || "News")}</div>
-      <a class="headlineTitle" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title || "Untitled headline")}</a>
-      <div class="headlineMeta">${escapeHtml(item.pubDate || "Recent")}</div>
-    </article>
-  `).join("");
-}
-
-async function loadHeadlinesForHotspot(properties) {
-  const rail = document.getElementById("headlineRail");
-  if (!rail) return;
-
-  const query = buildHeadlineQuery(properties);
-  rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
-
-  const { items } = await fetchHeadlinesWithFallback(query, properties);
-  renderHeadlines(items, query);
-}
-
 function openIntelCard(properties) {
-  const keyDates = normalizeStructuredList(properties.key_dates);
-  const eventsList = normalizeStructuredList(properties.events);
   const sev = Number(properties.severity).toFixed(2);
-  const dates = keyDates
-    .map((d) => `<li><b>${escapeHtml(d.date)}</b> — ${escapeHtml(d.note)}</li>`)
-    .join("");
-  const events = eventsList.map((e) => `<li>${escapeHtml(e)}</li>`).join("");
-
   modalContent.innerHTML = `
-    <div class="cardHero">
-      <img src="${escapeHtml(properties.image)}" alt="${escapeHtml(properties.name)} context image" referrerpolicy="no-referrer" />
-    </div>
     <div class="cardTitle">
-      <h2 style="margin:0">${renderFlagsMarkup(properties.flagCodes)} ${escapeHtml(properties.name)}</h2>
+      <h2 style="margin:0">${escapeHtml(properties.name)}</h2>
       <span class="badge">${escapeHtml(properties.region ?? "Global")}</span>
       <span class="badge" style="border-color:${properties.color};">${badgeLabel(properties.status)}</span>
       <span class="badge severityPill" style="background:${properties.color};">severity ${sev}</span>
@@ -669,22 +121,7 @@ function openIntelCard(properties) {
       <div class="eyebrow">Analysis</div>
       <div style="margin-top:6px; line-height:1.55">${escapeHtml(properties.analysis)}</div>
     </div>
-
-    ${dates ? `<div class="box"><div class="eyebrow">Key dates</div><ul>${dates}</ul></div>` : ""}
-    ${events ? `<div class="box" style="margin-top:10px"><div class="eyebrow">Significant events</div><ul>${events}</ul></div>` : ""}
-
-    ${normalizeSources(properties.sources).length
-      ? `<div style="margin-top:10px;opacity:.75;font-size:12px">Sources: ${escapeHtml(normalizeSources(properties.sources).join(" • "))}</div>`
-      : ""}
-
-    <div class="box headlineBox">
-      <div class="eyebrow">Trusted recent headlines</div>
-      <div class="headlineSub">Auto-curated from major outlets for rapid situational awareness.</div>
-      <div id="headlineRail" class="headlineRail" aria-live="polite"></div>
-    </div>
   `;
-
-  loadHeadlinesForHotspot(properties);
 
   modalBackdrop.classList.remove("hidden");
   modal.classList.remove("hidden");
@@ -697,100 +134,21 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
 }
 
-function getActiveFeaturesForMap() {
-  return activeMapFeatures;
-}
-
-function syncHotspotSource(map) {
-  const source = map.getSource(HOTSPOT_SOURCE_ID);
-  if (!source) return;
-  source.setData({ type: "FeatureCollection", features: getActiveFeaturesForMap() });
-}
-
-function getBasemapStyle() {
-  return MAPLIBRE_BASE_STYLE_URL;
-}
-
-function getFallbackStyle() {
-  return JSON.parse(JSON.stringify(FALLBACK_DARK_STYLE));
-}
-
-function applyTerminalTheme(map) {
-  const style = map.getStyle();
-  if (!style?.layers?.length) return;
-
-  const setPaint = (layerId, key, value) => {
-    if (!map.getLayer(layerId)) return;
-    try {
-      map.setPaintProperty(layerId, key, value);
-    } catch (_error) {
-      // no-op for incompatible layer property/type
-    }
-  };
-
-  for (const layer of style.layers) {
-    const layerId = layer.id;
-    const sourceLayer = String(layer["source-layer"] ?? "");
-    const layerType = layer.type;
-
-    if (layerType === "background") {
-      setPaint(layerId, "background-color", "#050b14");
-      continue;
-    }
-
-    if (sourceLayer.includes("water")) {
-      setPaint(layerId, "fill-color", "#10304f");
-      setPaint(layerId, "line-color", "#1b3f65");
-      continue;
-    }
-
-    if (sourceLayer.includes("landcover") || sourceLayer.includes("landuse")) {
-      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#1a2a26", "wood", "#1d302b", "park", "#203329", "residential", "#2a303b", "industrial", "#31333a", "#242c36"]);
-      continue;
-    }
-
-    if ((sourceLayer.includes("boundary") || sourceLayer.includes("admin")) && layerType === "fill") {
-      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 6], 6], 0, "#2a3440", 1, "#32303c", 2, "#2a3a35", 3, "#3a3235", 4, "#2e3842", 5, "#35353b" ]);
-      setPaint(layerId, "fill-opacity", 0.22);
-      continue;
-    }
-
-    if (sourceLayer.includes("boundary") || sourceLayer.includes("admin")) {
-      setPaint(layerId, "line-color", "#1ecf67");
-      setPaint(layerId, "line-width", ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.9, 8, 1.5]);
-      setPaint(layerId, "line-opacity", 0.85);
-      continue;
-    }
-
-    if (layerType === "symbol" && (sourceLayer.includes("place") || sourceLayer.includes("label") || layerId.includes("label"))) {
-      setPaint(layerId, "text-color", "#c0c7d1");
-      setPaint(layerId, "text-halo-color", "#0b1017");
-      setPaint(layerId, "text-halo-width", 1.1);
-      setPaint(layerId, "icon-color", "#9ea8b6");
-      continue;
-    }
-
-    if (layerType === "line" && sourceLayer.includes("transport")) {
-      setPaint(layerId, "line-color", "#2a3648");
-      setPaint(layerId, "line-opacity", 0.65);
-    }
-  }
-}
-
-function renderHotspotList(features, map) {
+function renderHotspotList(features) {
   hotspotListEl.innerHTML = "";
-
   for (const feature of [...features].sort((a, b) => b.properties.severity - a.properties.severity)) {
     const li = document.createElement("li");
     const button = document.createElement("button");
     button.className = "hotspotBtn";
     button.type = "button";
     button.innerHTML = `
-      <strong>${renderFlagsMarkup(feature.properties.flagCodes)} ${escapeHtml(feature.properties.name)}</strong>
+      <strong>${escapeHtml(feature.properties.name)}</strong>
       <span class="hotspotMeta">${escapeHtml(feature.properties.region)} · ${badgeLabel(feature.properties.status)} · sev ${Number(feature.properties.severity).toFixed(2)}</span>
     `;
     button.addEventListener("click", () => {
-      map.flyTo({ center: feature.geometry.coordinates, zoom: 3.3, essential: true });
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(feature.geometry.coordinates[0], feature.geometry.coordinates[1], 1800000)
+      });
       openIntelCard(feature.properties);
     });
     li.appendChild(button);
@@ -802,95 +160,32 @@ function renderHotspotList(features, map) {
   }
 }
 
-function ensureHotspotLayers(map) {
-  if (!map.getSource(HOTSPOT_SOURCE_ID)) {
-    map.addSource(HOTSPOT_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: getActiveFeaturesForMap() } });
-  }
+function clearHotspotEntities() {
+  hotspotEntities.forEach((entity) => viewer.entities.remove(entity));
+  hotspotEntities = [];
+}
 
-  if (!map.getLayer(HOTSPOT_GLOW_LAYER_ID)) {
-    map.addLayer({
-      id: HOTSPOT_GLOW_LAYER_ID,
-      type: "circle",
-      source: HOTSPOT_SOURCE_ID,
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 10, 4, 18, 6, 26],
-        "circle-color": ["get", "color"],
-        "circle-opacity": 0.26,
-        "circle-blur": 0.75
-      }
+function renderHotspotsOnGlobe(features) {
+  clearHotspotEntities();
+  for (const feature of features) {
+    const [lon, lat] = feature.geometry.coordinates;
+    const entity = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(lon, lat),
+      point: {
+        pixelSize: 10,
+        color: Cesium.Color.fromCssColorString(feature.properties.color),
+        outlineColor: Cesium.Color.fromCssColorString("#d8dccf"),
+        outlineWidth: 1.2,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      },
+      properties: feature.properties
     });
-  }
-
-  if (!map.getLayer(HOTSPOT_LAYER_ID)) {
-    map.addLayer({
-      id: HOTSPOT_LAYER_ID,
-      type: "circle",
-      source: HOTSPOT_SOURCE_ID,
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 3, 8, 6, 12],
-        "circle-color": ["get", "color"],
-        "circle-stroke-width": 1.3,
-        "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.97
-      }
-    });
-  }
-
-  if (!map.getLayer(HOTSPOT_HIT_LAYER_ID)) {
-    map.addLayer({
-      id: HOTSPOT_HIT_LAYER_ID,
-      type: "circle",
-      source: HOTSPOT_SOURCE_ID,
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 14, 3, 18, 6, 22],
-        "circle-color": "#000000",
-        "circle-opacity": 0
-      }
-    });
-  }
-
-  syncHotspotSource(map);
-
-  if (!hotspotInteractionBound) {
-    hotspotInteractionBound = true;
-
-    map.on("click", (event) => {
-      const feature = map.queryRenderedFeatures(event.point, { layers: [HOTSPOT_HIT_LAYER_ID, HOTSPOT_LAYER_ID] })?.[0];
-      if (feature) {
-        map.flyTo({ center: feature.geometry.coordinates, zoom: Math.max(map.getZoom(), 3), essential: true });
-        openIntelCard(feature.properties);
-      }
-    });
-
-    map.on("mousemove", (event) => {
-      const feature = map.queryRenderedFeatures(event.point, { layers: [HOTSPOT_HIT_LAYER_ID, HOTSPOT_LAYER_ID] })?.[0];
-      if (!feature) {
-        map.getCanvas().style.cursor = "";
-        if (hoverPopup) hoverPopup.remove();
-        return;
-      }
-
-      map.getCanvas().style.cursor = "pointer";
-      const p = feature.properties;
-      const html = `<div class="mapTooltip"><strong>${escapeHtml(p.name)}</strong><br><span>${badgeLabel(p.status)} · severity ${Number(p.severity).toFixed(2)}</span></div>`;
-      if (!hoverPopup) {
-        hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: "hotspotTooltip" });
-      }
-      hoverPopup.setLngLat(feature.geometry.coordinates).setHTML(html).addTo(map);
-    });
-
-    map.on("mouseout", () => {
-      map.getCanvas().style.cursor = "";
-      if (hoverPopup) hoverPopup.remove();
-    });
+    hotspotEntities.push(entity);
   }
 }
 
-function applyFilters(map) {
-  if (!fullFeatureCollection) {
-    return;
-  }
-
+function applyFilters() {
+  if (!fullFeatureCollection) return;
   const status = filterEl.value;
   const region = regionFilterEl.value;
   const minSeverity = Number(minSevEl.value);
@@ -905,83 +200,38 @@ function applyFilters(map) {
     return statusOk && regionOk && severityOk && searchOk;
   });
 
-  activeMapFeatures = filteredFeatures;
-  syncHotspotSource(map);
+  renderHotspotsOnGlobe(filteredFeatures);
   renderSummary(fullFeatureCollection.features, filteredFeatures);
-  renderHotspotList(filteredFeatures, map);
+  renderHotspotList(filteredFeatures);
 }
 
-function wireFilterHandlers(map) {
+function wireFilterHandlers() {
   minSevEl.addEventListener("input", () => {
     minSevValEl.textContent = Number(minSevEl.value).toFixed(2);
-    applyFilters(map);
+    applyFilters();
   });
-  filterEl.addEventListener("change", () => applyFilters(map));
-  regionFilterEl.addEventListener("change", () => applyFilters(map));
-  if (searchInputEl) searchInputEl.addEventListener("input", () => applyFilters(map));
-
-}
-
-function resetFiltersToDefaults() {
-  filterEl.value = "all";
-  regionFilterEl.value = "all";
-  minSevEl.value = "0";
-  minSevValEl.textContent = "0.00";
-  if (searchInputEl) searchInputEl.value = "";
-  if (commandInputEl) commandInputEl.value = "";
-}
-
-function refreshHotspotVisuals(map) {
-  ensureHotspotLayers(map);
-  if (mapDataReady) {
-    applyFilters(map);
-  }
-}
-
-function setProjection(map) {
-  const projectionName = projectionEl.checked ? "globe" : "mercator";
-  map.setProjection({ type: projectionName });
-  if (projectionName === "globe") {
-    map.setFog({ color: "rgb(15, 23, 42)", "high-color": "rgb(59,130,246)", "space-color": "rgb(3, 7, 18)" });
-  } else {
-    map.setFog(null);
-  }
+  filterEl.addEventListener("change", applyFilters);
+  regionFilterEl.addEventListener("change", applyFilters);
+  if (searchInputEl) searchInputEl.addEventListener("input", applyFilters);
 }
 
 async function loadHotspotsFromJson() {
   let hotspots = null;
-  let lastError = null;
-
   for (const url of HOTSPOT_DATA_CANDIDATES) {
     try {
       const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) {
-        lastError = new Error(`Failed to load ${url} (${response.status})`);
-        continue;
-      }
+      if (!response.ok) continue;
       hotspots = await response.json();
-      console.info(`Hotspot dataset loaded from: ${url}`);
       break;
-    } catch (error) {
-      lastError = error;
+    } catch {
+      // continue
     }
   }
 
-  if (!hotspots) {
-    throw lastError ?? new Error("Unable to load hotspot dataset from known paths.");
-  }
+  if (!hotspots) throw new Error("Unable to load hotspot dataset from known paths.");
+
   const features = hotspots.map((h) => {
     const severity = computeSeverity(h);
-    const enrichment = hotspotEnrichment[h.id] ?? {};
-    const regionFallbackImage = {
-      Europe: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Europe_satellite_globe.jpg/1280px-Europe_satellite_globe.jpg",
-      "Middle East": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Jerusalem_BW_14.JPG/1280px-Jerusalem_BW_14.JPG",
-      Africa: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/African_Union_headquarters.jpg/1280px-African_Union_headquarters.jpg",
-      "Asia-Pacific": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Singapore_skyline_2019.jpg/1280px-Singapore_skyline_2019.jpg",
-      Americas: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Bogota_CBD.jpg/1280px-Bogota_CBD.jpg"
-    }[h.region];
-    const image = enrichment.image ?? regionFallbackImage ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png";
-    const flagCodes = enrichment.flagCodes ?? inferFlagCodesFromHotspot(h);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [h.lon, h.lat] },
@@ -989,8 +239,6 @@ async function loadHotspotsFromJson() {
         ...h,
         severity,
         color: severityToColor(severity),
-        flagCodes,
-        image,
         analysis: h.analysis ?? buildAnalysis({ ...h, severity })
       }
     };
@@ -998,77 +246,96 @@ async function loadHotspotsFromJson() {
 
   fullFeatureCollection = { type: "FeatureCollection", features };
   filteredFeatures = features;
-  activeMapFeatures = features;
   setRegionOptions(features);
 
-  const lastUpdated = hotspots
-    .map((h) => h.last_update)
-    .filter(Boolean)
-    .sort()
-    .at(-1);
+  const lastUpdated = hotspots.map((h) => h.last_update).filter(Boolean).sort().at(-1);
   updatedAtEl.textContent = `Dataset updated: ${lastUpdated ?? "Unknown"}`;
-  logTerminal(`dataset loaded :: ${hotspots.length} hotspots indexed`);
+}
+
+async function addCountriesLayer() {
+  const countries = await Cesium.GeoJsonDataSource.load(COUNTRY_GEOJSON_URL, {
+    stroke: Cesium.Color.fromCssColorString("#7cbf90"),
+    strokeWidth: 1.1,
+    fill: Cesium.Color.fromCssColorString("#5c6369").withAlpha(0.36),
+    clampToGround: true
+  });
+
+  viewer.dataSources.add(countries);
+  for (const entity of countries.entities.values) {
+    if (entity.polygon) {
+      entity.polygon.material = Cesium.Color.fromCssColorString("#596169").withAlpha(0.34);
+      entity.polygon.outline = true;
+      entity.polygon.outlineColor = Cesium.Color.fromCssColorString("#7cbf90");
+      entity.polygon.outlineWidth = 1.0;
+    }
+  }
+}
+
+function setProjectionMode() {
+  if (projectionEl.checked) {
+    viewer.scene.morphTo3D(0.8);
+  } else {
+    viewer.scene.morphTo2D(0.8);
+  }
+}
+
+function wireEntityPick() {
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  handler.setInputAction((movement) => {
+    const pickedObject = viewer.scene.pick(movement.position);
+    if (!Cesium.defined(pickedObject) || !pickedObject.id?.properties) return;
+    const props = pickedObject.id.properties;
+    openIntelCard({
+      name: props.name?.getValue(),
+      region: props.region?.getValue(),
+      status: props.status?.getValue(),
+      severity: props.severity?.getValue(),
+      color: props.color?.getValue(),
+      likelihood: props.likelihood?.getValue(),
+      impact: props.impact?.getValue(),
+      category: props.category?.getValue(),
+      start_date: props.start_date?.getValue(),
+      last_update: props.last_update?.getValue(),
+      analysis: props.analysis?.getValue(),
+      summary: props.summary?.getValue()
+    });
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
 
 async function init() {
-  const map = new maplibregl.Map({
-    container: "map",
-    style: getBasemapStyle(),
-    center: [5, 24],
-    zoom: 1.45,
-    projection: "mercator"
+  viewer = new Cesium.Viewer("map", {
+    animation: false,
+    timeline: false,
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: true,
+    infoBox: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    selectionIndicator: false,
+    skyBox: false,
+    skyAtmosphere: false,
+    baseLayer: false
   });
 
-  window.__flashpointsMap = map;
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#12385a");
+  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#102336");
+  viewer.scene.globe.enableLighting = false;
 
-  map.addControl(new maplibregl.NavigationControl(), "top-right");
-  wireFilterHandlers(map);
-
-  projectionEl.addEventListener("change", () => {
-    setProjection(map);
-    refreshHotspotVisuals(map);
-  });
-
-
-  map.on("error", (event) => {
-    const message = String(event?.error?.message ?? "");
-    const sourceId = String(event?.sourceId ?? "");
-    const failedPrimaryTiles = /(demotiles\.maplibre|openmaptiles|pbf|tiles\.json)/i.test(message + sourceId)
-      && /(403|404|5\d\d|failed|fetch|tile|cors|network)/i.test(message);
-
-    if (failedPrimaryTiles && !styleFallbackTriggered) {
-      styleFallbackTriggered = true;
-      console.warn("Primary MapLibre base style failed; switching to fallback dark raster style.", event.error);
-      map.setStyle(getFallbackStyle());
-    }
-  });
-
-
-  map.on("style.load", () => {
-    applyTerminalTheme(map);
-    setProjection(map);
-    refreshHotspotVisuals(map);
-  });
-
-  await new Promise((resolve) => map.once("load", resolve));
-
+  await addCountriesLayer();
   await loadHotspotsFromJson();
-  resetFiltersToDefaults();
-  mapDataReady = true;
-  refreshHotspotVisuals(map);
+  wireFilterHandlers();
+  applyFilters();
+  wireEntityPick();
+
+  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(12, 24, 22000000) });
+
+  projectionEl.addEventListener("change", setProjectionMode);
+  setProjectionMode();
 }
 
 init().catch((error) => {
   console.error(error);
-  const message = String(error?.message ?? "");
-  const likelyDatasetIssue = /hotspot|json|fetch|load/i.test(message);
-
-  if (likelyDatasetIssue || !fullFeatureCollection?.features?.length) {
-    appSubtitleEl.textContent = "Failed to load hotspot data (deploy path issue). Check console for details.";
-    updatedAtEl.textContent = "Dataset updated: unavailable";
-    hotspotListEl.innerHTML = "<li class='hotspotMeta'>Dataset failed to load. Verify the deployed path includes data/hotspots.json.</li>";
-    return;
-  }
-
-  console.warn("Non-fatal interface warning occurred after data load; preserving active dashboard state.", error);
+  appSubtitleEl.textContent = "Failed to initialize Cesium world view. Check console for details.";
+  updatedAtEl.textContent = "Dataset updated: unavailable";
 });

@@ -11,9 +11,9 @@ Work In Progress
 
 ## What this build includes
 
-- Globe projection with interactive hotspot markers.
+- CesiumJS-powered world view with one-click switch between 3D globe and 2D map modes.
 - Threat matrix scoring model (likelihood + impact + status boost).
-- Green → yellow → red severity ramp.
+- Muted Cold War-style palette (dark blue oceans, desaturated countries, phosphor-green borders).
 - Modal “intel card” for each flashpoint (history, events, dates, and sources).
 - Filters for status, region, and minimum severity.
 - Coverage snapshot panel (counts + average severity).
