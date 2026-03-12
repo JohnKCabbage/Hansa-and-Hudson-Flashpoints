@@ -220,14 +220,14 @@ function severityToColor(score) {
   let b;
   if (s <= 0.5) {
     const t = s / 0.5;
-    r = Math.round(lerp(58, 236, t));
-    g = Math.round(lerp(126, 207, t));
-    b = Math.round(lerp(98, 87, t));
+    r = Math.round(lerp(106, 226, t));
+    g = Math.round(lerp(150, 194, t));
+    b = Math.round(lerp(92, 112, t));
   } else {
     const t = (s - 0.5) / 0.5;
-    r = Math.round(lerp(236, 250, t));
-    g = Math.round(lerp(207, 109, t));
-    b = Math.round(lerp(87, 78, t));
+    r = Math.round(lerp(226, 255, t));
+    g = Math.round(lerp(194, 126, t));
+    b = Math.round(lerp(112, 74, t));
   }
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
@@ -734,45 +734,45 @@ function applyTerminalTheme(map) {
     const layerType = layer.type;
 
     if (layerType === "background") {
-      setPaint(layerId, "background-color", "#050b14");
+      setPaint(layerId, "background-color", "#1d2b22");
       continue;
     }
 
     if (sourceLayer.includes("water")) {
-      setPaint(layerId, "fill-color", "#10304f");
-      setPaint(layerId, "line-color", "#1b3f65");
+      setPaint(layerId, "fill-color", "#0b1e33");
+      setPaint(layerId, "line-color", "#0b1e33");
       continue;
     }
 
     if (sourceLayer.includes("landcover") || sourceLayer.includes("landuse")) {
-      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#1a2a26", "wood", "#1d302b", "park", "#203329", "residential", "#2a303b", "industrial", "#31333a", "#242c36"]);
+      setPaint(layerId, "fill-color", ["match", ["coalesce", ["get", "class"], ""], "forest", "#4f6b43", "wood", "#5d7250", "park", "#6a7d59", "residential", "#877e66", "industrial", "#7c725e", "#726952"]);
       continue;
     }
 
     if ((sourceLayer.includes("boundary") || sourceLayer.includes("admin")) && layerType === "fill") {
-      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 6], 6], 0, "#2a3440", 1, "#32303c", 2, "#2a3a35", 3, "#3a3235", 4, "#2e3842", 5, "#35353b" ]);
-      setPaint(layerId, "fill-opacity", 0.22);
+      setPaint(layerId, "fill-color", ["interpolate", ["linear"], ["mod", ["coalesce", ["id"], 6], 6], 0, "#5f6a54", 1, "#6a7158", 2, "#627057", 3, "#76705d", 4, "#6b6b57", 5, "#756e5a" ]);
+      setPaint(layerId, "fill-opacity", 0.24);
       continue;
     }
 
     if (sourceLayer.includes("boundary") || sourceLayer.includes("admin")) {
-      setPaint(layerId, "line-color", "#1ecf67");
+      setPaint(layerId, "line-color", "#5d7250");
       setPaint(layerId, "line-width", ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.9, 8, 1.5]);
-      setPaint(layerId, "line-opacity", 0.85);
+      setPaint(layerId, "line-opacity", 0.72);
       continue;
     }
 
     if (layerType === "symbol" && (sourceLayer.includes("place") || sourceLayer.includes("label") || layerId.includes("label"))) {
-      setPaint(layerId, "text-color", "#c0c7d1");
-      setPaint(layerId, "text-halo-color", "#0b1017");
+      setPaint(layerId, "text-color", "#d7d0bd");
+      setPaint(layerId, "text-halo-color", "#2a342d");
       setPaint(layerId, "text-halo-width", 1.1);
-      setPaint(layerId, "icon-color", "#9ea8b6");
+      setPaint(layerId, "icon-color", "#c0b9a6");
       continue;
     }
 
     if (layerType === "line" && sourceLayer.includes("transport")) {
-      setPaint(layerId, "line-color", "#2a3648");
-      setPaint(layerId, "line-opacity", 0.65);
+      setPaint(layerId, "line-color", "#67715f");
+      setPaint(layerId, "line-opacity", 0.55);
     }
   }
 }
