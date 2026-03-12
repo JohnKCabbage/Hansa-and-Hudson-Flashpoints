@@ -80,7 +80,7 @@ h1::before { content: "> "; }
   grid-template-columns: 360px minmax(0, 1fr) 320px;
   gap: 12px;
   height: calc(100vh - 106px);
-  padding: 0 10px 10px;
+  padding: 0 10px 22px;
 }
 .sidebar, .intel { padding: 12px; overflow: auto; }
 
