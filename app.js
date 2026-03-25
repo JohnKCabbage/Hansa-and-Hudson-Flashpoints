@@ -51,13 +51,13 @@ const FALLBACK_DARK_STYLE = {
 };
 
 const hotspotEnrichment = {
-  ukraine_russia: {
+  ukraine: {
     flag: "🇺🇦 🇷🇺",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bakhmut_shelling_2022.jpg/1280px-Bakhmut_shelling_2022.jpg"
+    image: "assets/Pictures/UkraineWar.png"
   },
-  gaza_israel: {
+  israel_palestine: {
     flag: "🇵🇸 🇮🇱",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Gaza_City_skyline.jpg/1280px-Gaza_City_skyline.jpg"
+    image: "assets/Pictures/GazaWar.png"
   },
   taiwan_strait: {
     flag: "🇹🇼 🇨🇳",
