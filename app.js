@@ -427,7 +427,8 @@ const NON_PAYWALLED_NEWS_SOURCES = [
   "Sky News"
 ];
 
-const HEADLINE_LOOKBACK_DAYS = 31;
+const HEADLINE_LOOKBACK_DAYS = 14;
+const MIN_HEADLINES_PER_HOTSPOT = 5;
 
 const NON_PAYWALLED_SOURCE_DOMAINS = {
   "bbc.com": "BBC",
@@ -442,11 +443,34 @@ const NON_PAYWALLED_SOURCE_DOMAINS = {
   "news.sky.com": "Sky News"
 };
 
+function tokenizeHeadlineTerms(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[–—]/g, " ")
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 2 && !["conflict", "flashpoint", "tensions", "tension", "crisis"].includes(token));
+}
+
 function buildHeadlineQuery(properties) {
+  const idTokens = tokenizeHeadlineTerms(properties.id).slice(0, 2);
+  const nameTokens = tokenizeHeadlineTerms(properties.name).slice(0, 2);
+  const categoryTokens = tokenizeHeadlineTerms(properties.category).slice(0, 1);
+  const tokens = [...new Set([...idTokens, ...nameTokens, ...categoryTokens])].slice(0, 2);
+  const core = tokens.length ? tokens.join(" ") : "global";
+  return `${core} war`.trim();
+}
+
+function buildHeadlineQueryVariants(properties) {
+  const broad = buildHeadlineQuery(properties);
   const name = String(properties.name ?? "").replace(/[–—]/g, " ").trim();
   const region = String(properties.region ?? "").trim();
-  const category = String(properties.category ?? "").trim();
-  return [name, region, category].filter(Boolean).join(" ");
+  return [...new Set([
+    broad,
+    `${broad} latest`,
+    [name, "war"].filter(Boolean).join(" ").trim(),
+    [name, region].filter(Boolean).join(" ").trim()
+  ].filter(Boolean))];
 }
 
 function buildTrustedHeadlineFilterRegex() {
@@ -533,12 +557,12 @@ function parseRssItemsFromText(rssText) {
   }));
 }
 
-async function fetchHeadlinesWithFallback(query, properties) {
+function buildProvidersForQuery(query) {
   const googleFeedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:${HEADLINE_LOOKBACK_DAYS}d`)}&hl=en-US&gl=US&ceid=US:en`;
   const bingFeedUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
   const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=75&sort=DateDesc`;
 
-  const providers = [
+  return [
     {
       name: "gdelt",
       url: gdeltUrl,
@@ -573,7 +597,7 @@ async function fetchHeadlinesWithFallback(query, properties) {
     },
     {
       name: "jina-google",
-      url: `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+      url: `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:${HEADLINE_LOOKBACK_DAYS}d`)}&hl=en-US&gl=US&ceid=US:en`,
       parse: async (response) => parseRssItemsFromText(await response.text())
     },
     {
@@ -582,25 +606,77 @@ async function fetchHeadlinesWithFallback(query, properties) {
       parse: async (response) => parseRssItemsFromText(await response.text())
     }
   ];
+}
 
+function buildSupplementalHeadlineLinks(query) {
+  return [
+    {
+      title: `More recent coverage: ${query} (Google News)`,
+      link: `https://news.google.com/search?q=${encodeURIComponent(`${query} when:${HEADLINE_LOOKBACK_DAYS}d`)}`,
+      pubDate: "Live",
+      source: "Google News"
+    },
+    {
+      title: `More recent coverage: ${query} (Bing News)`,
+      link: `https://www.bing.com/news/search?q=${encodeURIComponent(query)}`,
+      pubDate: "Live",
+      source: "Bing News"
+    },
+    {
+      title: `Latest Reuters search: ${query}`,
+      link: `https://www.reuters.com/site-search/?query=${encodeURIComponent(query)}`,
+      pubDate: "Live",
+      source: "Reuters"
+    },
+    {
+      title: `Latest AP News search: ${query}`,
+      link: `https://apnews.com/search?q=${encodeURIComponent(query)}`,
+      pubDate: "Live",
+      source: "Associated Press"
+    },
+    {
+      title: `Latest BBC search: ${query}`,
+      link: `https://www.bbc.com/search?q=${encodeURIComponent(query)}`,
+      pubDate: "Live",
+      source: "BBC"
+    }
+  ];
+}
+
+async function fetchHeadlinesWithFallback(queryVariants, properties) {
   const failures = [];
-  for (const provider of providers) {
-    try {
-      const response = await fetch(provider.url, { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const items = await provider.parse(response);
-      const trustedItems = normalizeHeadlineItems(items, properties).slice(0, 18);
-      if (trustedItems.length) {
-        return { items: trustedItems, provider: provider.name };
+  const byLink = new Map();
+
+  for (const query of queryVariants) {
+    const providers = buildProvidersForQuery(query);
+    for (const provider of providers) {
+      try {
+        const response = await fetch(provider.url, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const items = await provider.parse(response);
+        const trustedItems = normalizeHeadlineItems(items, properties);
+        for (const item of trustedItems) {
+          if (!byLink.has(item.link)) byLink.set(item.link, item);
+        }
+        if (byLink.size >= MIN_HEADLINES_PER_HOTSPOT) {
+          return { items: [...byLink.values()].slice(0, 18), provider: `${provider.name}:${query}` };
+        }
+      } catch (error) {
+        failures.push(`${provider.name}:${query}: ${error.message}`);
       }
-      failures.push(`${provider.name}: no trusted items`);
-    } catch (error) {
-      failures.push(`${provider.name}: ${error.message}`);
     }
   }
 
-  console.warn("Headline providers exhausted:", failures.join(" | "));
-  return { items: [], provider: "none" };
+  const primaryQuery = queryVariants[0] ?? "global war";
+  for (const item of buildSupplementalHeadlineLinks(primaryQuery)) {
+    if (!byLink.has(item.link)) byLink.set(item.link, item);
+  }
+
+  const items = [...byLink.values()].slice(0, 18);
+  if (items.length < MIN_HEADLINES_PER_HOTSPOT) {
+    console.warn("Headline providers exhausted:", failures.join(" | "));
+  }
+  return { items: items.slice(0, Math.max(MIN_HEADLINES_PER_HOTSPOT, items.length)), provider: "combined" };
 }
 
 function renderHeadlines(items, query) {
@@ -625,10 +701,11 @@ async function loadHeadlinesForHotspot(properties) {
   const rail = document.getElementById("headlineRail");
   if (!rail) return;
 
-  const query = buildHeadlineQuery(properties);
+  const queryVariants = buildHeadlineQueryVariants(properties);
+  const query = queryVariants[0];
   rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
 
-  const { items } = await fetchHeadlinesWithFallback(query, properties);
+  const { items } = await fetchHeadlinesWithFallback(queryVariants, properties);
   renderHeadlines(items, query);
 }
 
