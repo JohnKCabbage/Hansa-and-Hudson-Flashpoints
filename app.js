@@ -152,6 +152,8 @@ let mapDataReady = false;
 let hoverPopup = null;
 let hotspotInteractionBound = false;
 let styleFallbackTriggered = false;
+const headlineCache = new Map();
+const HEADLINE_CACHE_TTL_MS = 3 * 60 * 1000;
 
 function logTerminal(message) {
   if (!terminalLogEl) return;
@@ -429,6 +431,7 @@ const NON_PAYWALLED_NEWS_SOURCES = [
 
 const HEADLINE_LOOKBACK_DAYS = 14;
 const MIN_HEADLINES_PER_HOTSPOT = 5;
+const HEADLINE_REQUEST_TIMEOUT_MS = 3800;
 
 const NON_PAYWALLED_SOURCE_DOMAINS = {
   "bbc.com": "BBC",
@@ -643,26 +646,54 @@ function buildSupplementalHeadlineLinks(query) {
   ];
 }
 
+async function fetchProviderItems(provider) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), HEADLINE_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(provider.url, {
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await provider.parse(response);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function fetchHeadlinesWithFallback(queryVariants, properties) {
   const failures = [];
   const byLink = new Map();
 
   for (const query of queryVariants) {
     const providers = buildProvidersForQuery(query);
-    for (const provider of providers) {
+    const results = await Promise.allSettled(providers.map(async (provider) => {
       try {
-        const response = await fetch(provider.url, { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const items = await provider.parse(response);
-        const trustedItems = normalizeHeadlineItems(items, properties);
-        for (const item of trustedItems) {
-          if (!byLink.has(item.link)) byLink.set(item.link, item);
-        }
-        if (byLink.size >= MIN_HEADLINES_PER_HOTSPOT) {
-          return { items: [...byLink.values()].slice(0, 18), provider: `${provider.name}:${query}` };
-        }
+        const items = await fetchProviderItems(provider);
+        return {
+          provider: provider.name,
+          items: normalizeHeadlineItems(items, properties)
+        };
       } catch (error) {
-        failures.push(`${provider.name}:${query}: ${error.message}`);
+        return {
+          provider: provider.name,
+          error: error?.name === "AbortError" ? "request timeout" : error.message
+        };
+      }
+    }));
+
+    for (const result of results) {
+      if (result.status !== "fulfilled") continue;
+      if (result.value.error) {
+        failures.push(`${result.value.provider}:${query}: ${result.value.error}`);
+        continue;
+      }
+
+      for (const item of result.value.items) {
+        if (!byLink.has(item.link)) byLink.set(item.link, item);
+      }
+      if (byLink.size >= MIN_HEADLINES_PER_HOTSPOT) {
+        return { items: [...byLink.values()].slice(0, 18), provider: `${result.value.provider}:${query}` };
       }
     }
   }
@@ -703,10 +734,24 @@ async function loadHeadlinesForHotspot(properties) {
 
   const queryVariants = buildHeadlineQueryVariants(properties);
   const query = queryVariants[0];
+  const cacheKey = String(properties.id ?? query);
+  const cached = headlineCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt <= HEADLINE_CACHE_TTL_MS) {
+    renderHeadlines(cached.items, query);
+    return;
+  }
+
   rail.innerHTML = '<div class="headlineFallback">Loading recent trusted headlines…</div>';
 
-  const { items } = await fetchHeadlinesWithFallback(queryVariants, properties);
-  renderHeadlines(items, query);
+  try {
+    const { items } = await fetchHeadlinesWithFallback(queryVariants, properties);
+    const finalItems = items.length ? items : buildSupplementalHeadlineLinks(query);
+    headlineCache.set(cacheKey, { items: finalItems, cachedAt: Date.now() });
+    renderHeadlines(finalItems, query);
+  } catch (_error) {
+    const fallbackItems = buildSupplementalHeadlineLinks(query);
+    renderHeadlines(fallbackItems, query);
+  }
 }
 
 function openIntelCard(properties) {
